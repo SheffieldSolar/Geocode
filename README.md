@@ -9,14 +9,14 @@ Geocode postcodes or addresses using the Code Point Open database and GMaps API.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
 * Caches GMaps API queries locally so that repeated queries can be fulfilled without a new API request.
-* Version 0.4.16
+* Version 0.4.18
 * Developed and tested with Python 3.6, should work for 3.6+.
 
 ## How do I get set up? ##
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
-Run `pip install git+https://github.com/SheffieldSolar/Geocode/`
+Run `pip3 install git+https://github.com/SheffieldSolar/Geocode/`
 
 Check that the installation was successful by running the following command from terminal / command-line:
 
@@ -166,7 +166,7 @@ In the above example, `postcodes` and `addresses` are lists of strings, but it s
 
 ## How do I update? ##
 
-Run `pip install --upgrade git+https://github.com/SheffieldSolar/Geocode/`.
+Run `pip3 install --upgrade git+https://github.com/SheffieldSolar/Geocode/`.
 You may also wish to clear all locally cached data by running the following command from terminal/command-prompt:
 
 ```
