@@ -22,7 +22,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="0.4.16",
+    version="0.4.17",
 
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
     long_description=long_description,
@@ -35,7 +35,7 @@ setup(
     author_email="jamie.taylor@sheffield.ac.uk",
 
     # Choose your license
-    license="Other/Proprietary License",
+    license="MIT",
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

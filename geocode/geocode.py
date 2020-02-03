@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 A lightweight geocoder that uses OS Code Point Open where possible for postcodes and GMaps API for
 everything else.
@@ -6,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.4.16"
+__version__ = "0.4.17"
 
 import os
 import sys
