@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 import os
 import sys
@@ -371,7 +371,7 @@ def parse_options():
                         required=False, default=None, metavar="</path/to/zip-file>",
                         help="Load the Code Point Open data from a local zip file.")
     parser.add_argument("--load-gmaps-key", dest="gmaps_key", action="store", type=str,
-                        required=False, default=None, metavar="</path/to/zip-file>",
+                        required=False, default=None, metavar="<gmaps-api-key>",
                         help="Load a Google Maps API key.")
     options = parser.parse_args()
     return options

@@ -9,7 +9,7 @@ Geocode postcodes or addresses using the Code Point Open database and GMaps API.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
 * Caches GMaps API queries locally so that repeated queries can be fulfilled without a new API request.
-* Version 0.5.0
+* Version 0.5.1
 * Developed and tested with Python 3.6, should work for 3.6+.
 
 ## How do I get set up? ##
