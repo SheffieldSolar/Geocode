@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.4.18"
+__version__ = "0.5.0"
 
 import os
 import sys
@@ -36,6 +36,7 @@ class Geocoder:
         self.gmaps_cache_file = os.path.join(self.gmaps_dir,
                                              "gmaps_cache_{}.p".format(version_string))
         self.cpo_dir = os.path.join(SCRIPT_DIR, "code_point_open")
+        self.cache_dir = os.path.join(SCRIPT_DIR, "cache")
         self.cpo_zipfile = os.path.join(self.cpo_dir, "codepo_gb.zip")
         self.cpo_cache_file = os.path.join(self.cpo_dir,
                                            "code_point_open_{}.p".format(version_string))
@@ -62,7 +63,8 @@ class Geocoder:
             self.gmaps_cache = self.load_gmaps_cache()
         self.timer = TIME.time()
         self.progress_bar = progress_bar
-        self.cache = {}
+        self.cache_file = os.path.join(self.cache_dir, "cache_{}.p".format(version_string))
+        self.cache = self.load_cache()
         self.status_codes = {
             0: "Failed",
             1: "Full match with Code Point Open",
@@ -76,8 +78,12 @@ class Geocoder:
 
     def __exit__(self, *args):
         self.flush_gmaps_cache()
+        self.flush_cache()
 
     def clear_cache(self):
+        cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p"))
+        for cache_file in cache_files:
+            os.remove(cache_file)
         gmaps_cache_files = glob.glob(os.path.join(self.gmaps_dir, "gmaps_cache_*.p"))
         for gmaps_cache_file in gmaps_cache_files:
             os.remove(gmaps_cache_file)
@@ -109,10 +115,22 @@ class Geocoder:
         else:
             return {}
 
+    def load_cache(self):
+        if os.path.isfile(self.cache_file):
+            with open(self.cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        else:
+            return {}
+
     def flush_gmaps_cache(self):
         if self.gmaps_cache is not None:
             with open(self.gmaps_cache_file, "wb") as pickle_fid:
                 pickle.dump(self.gmaps_cache, pickle_fid)
+
+    def flush_cache(self):
+        if self.cache is not None:
+            with open(self.cache_file, "wb") as pickle_fid:
+                pickle.dump(self.cache, pickle_fid)
 
     def load_code_point_open(self, force_reload=False):
         if os.path.isfile(self.cpo_cache_file) and not force_reload:
