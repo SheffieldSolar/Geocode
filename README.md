@@ -44,6 +44,10 @@ optional arguments:
 Jamie Taylor, 2019-10-08
 ```
 
+Note that this library makes use of the [Shapely library](https://pypi.org/project/Shapely/) from PyPi, which often does not install correctly on Windows machines due to some missing dependencies. If using Windows and you see an error like `OSError: [WinError 126] The specified module could not be found`, you should install Shapely from one of the unofficial binaries [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely) e.g.
+
+```>> pip install https://download.lfd.uci.edu/pythonlibs/s2jqpv5t/Shapely-1.7.0-cp37-cp37m-win_amd64.whl```
+
 ### Code Point Open setup ###
 
 As of version 0.4.15, the Code Point Open data is packaged with this repository, however the following instructions can be used to update the local Code Point Open dataset without re-installing the Geocode library.
