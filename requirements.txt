@@ -3,3 +3,6 @@ pandas
 googlemaps
 convertbng
 requests
+shapely
+pyshp
+pyproj

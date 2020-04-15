@@ -20,16 +20,22 @@ import json
 import glob
 import warnings
 import requests
-from numpy import isnan
+from numpy import isnan, arange
 import pandas as pd
 import googlemaps
-from convertbng.util import convert_lonlat
+import pyproj
+import shapefile
+try:
+    from shapely.geometry import shape, Point, Polygon
+except ImportError:
+    warnings.warn("Failed to import Shapely library - you will not be able to reverse-geocode! See "
+                  "notes in the README about installing Shapely on Windows machines.")
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class Geocoder:
     """Use Code Point Open and GMaps to geocode addresses and postcodes."""
-    def __init__(self, quiet=False, progress_bar=False, skip_setup=False):
+    def __init__(self, quiet=False, progress_bar=False, skip_setup=False, prefix=""):
         self.quiet = quiet
         version_string = __version__.replace(".", "-")
         self.gmaps_dir = os.path.join(SCRIPT_DIR, "google_maps")
@@ -40,11 +46,15 @@ class Geocoder:
         self.cpo_zipfile = os.path.join(self.cpo_dir, "codepo_gb.zip")
         self.cpo_cache_file = os.path.join(self.cpo_dir,
                                            "code_point_open_{}.p".format(version_string))
-        self.ons_dir = os.path.join(SCRIPT_DIR, "ons")
+        self.ons_dir = os.path.join(SCRIPT_DIR, "ons_nrs")
         if not os.path.isdir(self.ons_dir):
             os.mkdir(self.ons_dir)
         self.llsoa_cache_file = os.path.join(self.ons_dir,
                                              "llsoa_centroids_{}.p".format(version_string))
+        self.llsoa_boundaries_cache_file = os.path.join(
+            self.ons_dir, "llsoa_boundaries_{}.p".format(version_string)
+        )
+        self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
                                                      "constituency_centroids.psv")
@@ -54,6 +64,8 @@ class Geocoder:
         self.gmaps_key_file = os.path.join(self.gmaps_dir, "key.txt")
         self.gmaps_cache = None
         self.llsoa_lookup = None
+        self.llsoa_regions = None
+        self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
         if not skip_setup:
             self.cpo = self.load_code_point_open()
@@ -63,6 +75,7 @@ class Geocoder:
             self.gmaps_cache = self.load_gmaps_cache()
         self.timer = TIME.time()
         self.progress_bar = progress_bar
+        self.prefix = prefix
         self.cache_file = os.path.join(self.cache_dir, "cache_{}.p".format(version_string))
         self.cache = self.load_cache()
         self.status_codes = {
@@ -93,6 +106,9 @@ class Geocoder:
         llsoa_cache_files = glob.glob(os.path.join(self.ons_dir, "llsoa_centroids_*.p"))
         for llsoa_cache_file in llsoa_cache_files:
             os.remove(llsoa_cache_file)
+        llsoa_boundaries_cache_files = glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p"))
+        for llsoa_boundaries_cache_file in llsoa_boundaries_cache_files:
+            os.remove(llsoa_boundaries_cache_file)
         constituency_cache_files = glob.glob(os.path.join(self.gov_dir,
                                                           "constituency_centroids_*.p"))
         for constituency_cache_file in constituency_cache_files:
@@ -157,7 +173,10 @@ class Geocoder:
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
-        lons, lats = convert_lonlat(cpo["Eastings"][nn_indices], cpo["Northings"][nn_indices])
+        wgs84 = pyproj.Proj("EPSG:4326")
+        osgb1936 = pyproj.Proj("EPSG:27700")
+        lats, lons = pyproj.transform(osgb1936, wgs84, cpo.loc[nn_indices, ("Eastings")].to_numpy(),
+                                      cpo.loc[nn_indices, ("Northings")].to_numpy())
         cpo.loc[nn_indices, "longitude"] = lons
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()
@@ -171,7 +190,8 @@ class Geocoder:
         if os.path.isfile(self.llsoa_cache_file):
             with open(self.llsoa_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
-        self.myprint("Extracting the ONS LLSOA Centroids data (this only needs to be done once)...")
+        self.myprint("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
+                     "once)...")
         ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
         success = False
         retries = 0
@@ -184,19 +204,78 @@ class Geocoder:
                     retries += 1
                     continue
                 raw = json.loads(response.text)
-                llsoa_lookup = {f["properties"]["lsoa11cd"]:
-                                tuple(f["geometry"]["coordinates"][::-1])
-                                for f in raw["features"]}
+                engwales_lookup = {f["properties"]["lsoa11cd"]:
+                                   tuple(f["geometry"]["coordinates"][::-1])
+                                   for f in raw["features"]}
                 success = True
             except:
                 success = False
                 retries += 1
         if not success:
             raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        wgs84 = pyproj.Proj("EPSG:4326")
+        osgb1936 = pyproj.Proj("EPSG:27700")
+        codes, eastings, northings = [], [], []
+        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
+            with nrs_zip.open("OutputArea2011_PWC_WGS84.csv", "r") as fid:
+                next(fid)
+                for line in fid:
+                    _, _, code, _, easting, northing = line.decode('UTF-8').strip().split(",")
+                    codes.append(code)
+                    eastings.append(float(easting))
+                    northings.append(float(northing))
+        lats, lons = pyproj.transform(osgb1936, wgs84, eastings, northings)
+        scots_lookup = {code: (lat, lon) for code, lat, lon in zip(codes, lats, lons)}
+        llsoa_lookup = {**engwales_lookup , **scots_lookup}
         with open(self.llsoa_cache_file, "wb") as pickle_fid:
             pickle.dump(llsoa_lookup, pickle_fid)
         self.myprint(f"    -> Extracted and pickled to '{self.llsoa_cache_file}'")
         return llsoa_lookup
+
+    def load_llsoa_boundaries(self):
+        if os.path.isfile(self.llsoa_boundaries_cache_file):
+            with open(self.llsoa_boundaries_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        self.myprint("Extracting the LLSOA boundary data from ONS and NRS (this only needs to be "
+                     "done once)...")
+        ons_url = "https://opendata.arcgis.com/datasets/007577eeb8e34c62a1844df090a93128_0.geojson"
+        # Loading NRS data from URL abandoned due to need for re-projection
+        # nrs_url = "https://www.nrscotland.gov.uk/files/geography/output-area-2011-eor.zip"
+        nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
+        nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
+        success = False
+        retries = 0
+        while not success and retries < 3:
+            try:
+                response = requests.get(ons_url)
+                response.raise_for_status()
+                if response.status_code != 200:
+                    success = False
+                    retries += 1
+                    continue
+                raw = json.loads(response.text)
+                engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"])
+                                    for f in raw["features"]}
+                success = True
+            except:
+                raise
+                success = False
+                retries += 1
+        if not success:
+            raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
+            with nrs_zip.open(nrs_shp_file, "r") as shp:
+                with nrs_zip.open(nrs_dbf_file, "r") as dbf:
+                    sf = shapefile.Reader(shp=shp, dbf=dbf)
+                    scots_regions = {sr.record[1]: shape(sr.shape.__geo_interface__)
+                                     for sr in sf.shapeRecords()}
+        llsoa_regions = {**engwales_regions , **scots_regions}
+        llsoa_regions = {llsoacd: (llsoa_regions[llsoacd], llsoa_regions[llsoacd].bounds)
+                         for llsoacd in llsoa_regions}
+        with open(self.llsoa_boundaries_cache_file, "wb") as pickle_fid:
+            pickle.dump(llsoa_regions, pickle_fid)
+        self.myprint(f"    -> Extracted and pickled to '{self.llsoa_boundaries_cache_file}'")
+        return llsoa_regions
 
     def load_constituency_lookup(self):
         if os.path.isfile(self.constituency_cache_file):
@@ -264,8 +343,8 @@ class Geocoder:
                 results.append(self.geocode_one(postcode, address))
                 self.cache[(postcode, address)] = results[-1]
             if self.progress_bar and (i % 10 == 0 or i == tot - 1):
-                print_progress(i+1, tot, prefix="[Geocode]     POSTCODE", suffix="", decimals=2,
-                               bar_length=100)
+                print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     POSTCODE", suffix="",
+                               decimals=2, bar_length=100)
         return results
 
     def geocode_one(self, postcode=None, address=None):
@@ -287,8 +366,28 @@ class Geocoder:
         for i, llsoa_ in enumerate(llsoa):
             results.append(self.llsoa_centroid(llsoa_))
             if self.progress_bar and (i % 10 == 0 or i == tot - 1):
-                print_progress(i+1, tot, prefix="[Geocode]     LLSOA", suffix="", decimals=2,
-                               bar_length=100)
+                print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     LLSOA", suffix="",
+                               decimals=2, bar_length=100)
+        return results
+
+    def reverse_geocode_llsoa(self, latlons):
+        if self.llsoa_regions is None:
+            self.llsoa_regions = self.load_llsoa_boundaries()
+        results = []
+        tot = len(latlons)
+        for i, (lat, lon) in enumerate(latlons):
+            possible_matches = []
+            for llsoacd in self.llsoa_regions:
+                bounds = self.llsoa_regions[llsoacd][1]
+                if bounds[0] <= lon <= bounds[2] and bounds[0] <= lon <= bounds[2]:
+                    possible_matches.append(llsoacd)
+            for llsoacd in possible_matches:
+                if self.llsoa_regions[llsoacd][0].contains(Point(lon, lat)):
+                    results.append(llsoacd)
+                    if self.progress_bar and (i % 10 == 0 or i == tot - 1):
+                        print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     REVERSE-LLSOA",
+                                       suffix="", decimals=2, bar_length=100)
+                    break
         return results
 
     def llsoa_centroid(self, llsoa):
@@ -307,8 +406,8 @@ class Geocoder:
         for i, constituency_ in enumerate(constituency):
             results.append(self.constituency_centroid(constituency_))
             if self.progress_bar and (i % 10 == 0 or i == tot - 1):
-                print_progress(i+1, tot, prefix="[Geocode]     CONSTITUENCY", suffix="", decimals=2,
-                               bar_length=100)
+                print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     CONSTITUENCY", suffix="",
+                               decimals=2, bar_length=100)
         return results
 
     def constituency_centroid(self, constituency):
@@ -376,6 +475,39 @@ def parse_options():
     options = parser.parse_args()
     return options
 
+def debug():
+    sample_llsoas = ["E01025397", "E01003065", "E01017548", "E01023301", "E01021142", "E01019037",
+                     "E01013873", "S00092417"]
+    with Geocoder(progress_bar=True) as geocoder:
+        results = geocoder.geocode_llsoa(sample_llsoas)
+    for llsoa, (lat, lon) in zip(sample_llsoas, results):
+        print(f"[Geocode] {llsoa} :    {lat}, {lon}")
+    sample_latlons = [
+        (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
+        (50.409, -4.672), (52.940, -1.146), (57.060, -2.874)
+    ]
+    with Geocoder(progress_bar=True) as geocoder:
+        results = geocoder.reverse_geocode_llsoa(sample_latlons)
+    for (lat, lon), llsoa in zip(sample_latlons, results):
+        print(f"[Geocode] {lat}, {lon} :    {llsoa}")
+    sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
+                             "Inverness Nairn Badenoch and Strathspey", # missing commas :(
+                             "Dumfries and Galloway"]
+    with Geocoder(progress_bar=True) as geocoder:
+        results = geocoder.geocode_constituency(sample_constituencies)
+    for constituency, (lat, lon) in zip(sample_constituencies, results):
+        print(f"[Geocode] {constituency} :    {lat}, {lon}")
+    sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
+    with open(sample_file) as fid:
+        postcodes = [line.strip() for line in fid if line.strip()]
+    timerstart = TIME.time()
+    with Geocoder(progress_bar=True) as geocoder:
+        results = geocoder.geocode(postcodes=postcodes[:100])
+        for postcode, (lat, lon, status) in zip(postcodes, results):
+            print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
+                  f"{geocoder.status_codes[status]}")
+    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+
 def main():
     options = parse_options()
     if options.clear_cache:
@@ -394,29 +526,7 @@ def main():
             if geocoder.load_gmaps_key() == options.gmaps_key:
                 print(f"[Geocode]     -> GMaps key saved to '{geocoder.gmaps_key_file}'")
     if options.debug:
-        sample_llsoas = ["E01025397", "E01003065", "E01017548", "E01023301", "E01021142",
-                         "E01019037", "E01019037", "E01013873"]
-        with Geocoder(progress_bar=True) as geocoder:
-            results = geocoder.geocode_llsoa(sample_llsoas)
-        for llsoa, (lat, lon) in zip(sample_llsoas, results):
-            print(f"[Geocode] {llsoa} :    {lat}, {lon}")
-        sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
-                                 "Inverness Nairn Badenoch and Strathspey", # missing commas :(
-                                 "Dumfries and Galloway"]
-        with Geocoder(progress_bar=True) as geocoder:
-            results = geocoder.geocode_constituency(sample_constituencies)
-        for constituency, (lat, lon) in zip(sample_constituencies, results):
-            print(f"[Geocode] {constituency} :    {lat}, {lon}")
-        sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
-        with open(sample_file) as fid:
-            postcodes = [line.strip() for line in fid if line.strip()]
-        timerstart = TIME.time()
-        with Geocoder(progress_bar=True) as geocoder:
-            results = geocoder.geocode(postcodes=postcodes[:100])
-            for postcode, (lat, lon, status) in zip(postcodes, results):
-                print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
-                      f"{geocoder.status_codes[status]}")
-        print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+        debug()
 
 if __name__ == "__main__":
     main()

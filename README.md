@@ -4,12 +4,13 @@ Geocode postcodes or addresses using the Code Point Open database and GMaps API.
 
 ## What is this repository for? ##
 
-* Use Code Point Open and/or Google Maps API to geocode postcode and/or address into lat/lng co-ordinates.
-* Use ONS LLSOA Population Weighted Centroids to geocode Lower Layer Super Output Areas.
+* Use Code Point Open and/or Google Maps API to geocode postcode and/or address into lat/lon co-ordinates.
+* Use ONS & NRS LLSOA Population Weighted Centroids to geocode Lower Layer Super Output Areas.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
+* Use GIS boundaries data from ONS and NRS to reverse-geocode lat/lon to LLSOA.
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
 * Caches GMaps API queries locally so that repeated queries can be fulfilled without a new API request.
-* Version 0.5.1
+* Version 0.6.0
 * Developed and tested with Python 3.6, should work for 3.6+.
 
 ## How do I get set up? ##
@@ -88,7 +89,15 @@ Any queries you make to the GMaps API will be cached to `geocode/google_maps/gma
 
 ### ONS setup ###
 
-The Geocode library makes use of data from the Office for National Statistics in order to geocode Lower Layer Super Output Areas (LLSOAs). The first time you make use of the `Geocoder.geocode_llsoa()` method, the LLSOA (December 2011) Population Weighted Centroids data will be downloaded from the ONS API and cached locally in `geocode/ons/llsoa_centroids_<version>.p`. More information [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-population-weighted-centroids).
+The Geocode library makes use of data from the Office for National Statistics in order to geocode Lower Layer Super Output Areas (LLSOAs) in England and Wales. The first time you make use of the `Geocoder.geocode_llsoa()` method, the LLSOA (December 2011) Population Weighted Centroids data will be downloaded from the ONS API and cached locally in `geocode/ons_nrs/llsoa_centroids_<version>.p`. The first time you make use of the `Geocoder.reverse_geocode_llsoa()` method, the LLSOA (December 2011) Boundaries EW data will be downloaded from the ONS API and cached locally in `geocode/ons_nrs/llsoa_boundaries_<version>.p`. More information [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-population-weighted-centroids) and [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-boundaries-ew-bsc).
+
+### NRS setup ###
+
+The Geocode library makes use of data from National Records of Scotland in order to geocode Lower Layer Super Output Areas (LLSOAs) in Scotland. The raw population-weighted centroids and boundary data is available from the NRS website, but for convenience and performance reasons the data has been re-formatted and re-projected and is packaged with this library. More information [here](https://www.nrscotland.gov.uk/statistics-and-data/geography/our-products/census-datasets/2011-census/2011-census-supporting-information).
+
+Contains NRS data © Crown copyright and database right 2020
+
+Contains Ordnance Survey data © Crown copyright and database right 2020
 
 ### data.gov.uk setup ###
 
@@ -121,6 +130,12 @@ def main():
         for llsoa, (lat, lon) in zip(llsoas, results):
             print(f"LLSOA: `{llsoa}`")
             print(f"    {lat:.3f}, {lon:.3f}")
+        # Reverse-geocode some lat/lons to LLSOAs...
+        latlons = [(53.384, -1.467), (53.388, -1.470)]
+        results = geocoder.reverse_geocode_llsoa(latlons)
+        for llsoa, (lat, lon) in zip(results, latlons):
+            print(f"LATLON: {lat:.3f}, {lon:.3f}:")
+            print(f"    `{llsoa}`")
         # Geocode some Constituencies...
         constituencies = ["Sheffield Central", "Sheffield Hallam"]
         results = geocoder.geocode_constituency(constituencies)
@@ -141,15 +156,19 @@ Postcode: `S3 7`    Address: `None`
 Postcode: `S3`    Address: `None`
     53.387, -1.474    ->  Partial match with Code Point Open
 Postcode: `None`    Address: `Hicks Building, Sheffield`
-    53.381, -1.487    ->  Full match with GMaps
+    Failed to geocode!
 Postcode: `None`    Address: `Hicks`
     Failed to geocode!
 Postcode: `S3 7RH`    Address: `Hicks Building`
-    53.381, -1.487    ->  Full match with GMaps
+    Failed to geocode!
 LLSOA: `E01033264`
     53.384, -1.467
 LLSOA: `E01033262`
     53.388, -1.470
+LATLON: 53.384, -1.467:
+    `E01033264`
+LATLON: 53.388, -1.470:
+    `E01033262`
 Constituency: `Sheffield Central`
     53.376, -1.474
 Constituency: `Sheffield Hallam`
