@@ -10,7 +10,7 @@ Geocode postcodes or addresses using the Code Point Open database and GMaps API.
 * Use GIS boundaries data from ONS and NRS to reverse-geocode lat/lon to LLSOA.
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
 * Caches GMaps API queries locally so that repeated queries can be fulfilled without a new API request.
-* Version 0.6.0
+* Version 0.6.1
 * Developed and tested with Python 3.6, should work for 3.6+.
 
 ## How do I get set up? ##
