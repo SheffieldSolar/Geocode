@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.5.1"
+__version__ = "0.6.2"
 
 import os
 import sys
@@ -27,9 +27,11 @@ import pyproj
 import shapefile
 try:
     from shapely.geometry import shape, Point, Polygon
+    SHAPELY_AVAILABLE = True
 except ImportError:
     warnings.warn("Failed to import Shapely library - you will not be able to reverse-geocode! See "
                   "notes in the README about installing Shapely on Windows machines.")
+    SHAPELY_AVAILABLE = False
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -54,6 +56,8 @@ class Geocoder:
         self.llsoa_boundaries_cache_file = os.path.join(
             self.ons_dir, "llsoa_boundaries_{}.p".format(version_string)
         )
+        self.dz_lookup_cache_file = os.path.join(self.ons_dir,
+                                                 "datazone_lookup_{}.p".format(version_string))
         self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
@@ -67,6 +71,7 @@ class Geocoder:
         self.llsoa_regions = None
         self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
+        self.dz_lookup = None
         if not skip_setup:
             self.cpo = self.load_code_point_open()
             self.gmaps_key = self.load_gmaps_key()
@@ -109,6 +114,9 @@ class Geocoder:
         llsoa_boundaries_cache_files = glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p"))
         for llsoa_boundaries_cache_file in llsoa_boundaries_cache_files:
             os.remove(llsoa_boundaries_cache_file)
+        dz_lookup_cache_files = glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p"))
+        for dz_lookup_cache_file in dz_lookup_cache_files:
+            os.remove(dz_lookup_cache_file)
         constituency_cache_files = glob.glob(os.path.join(self.gov_dir,
                                                           "constituency_centroids_*.p"))
         for constituency_cache_file in constituency_cache_files:
@@ -277,6 +285,21 @@ class Geocoder:
         self.myprint(f"    -> Extracted and pickled to '{self.llsoa_boundaries_cache_file}'")
         return llsoa_regions
 
+    def load_datazone_lookup(self):
+        if os.path.isfile(self.dz_lookup_cache_file):
+            with open(self.dz_lookup_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
+            with nrs_zip.open("OA_DZ_IZ_2011.csv", "r") as fid:
+                dz_lookup = pd.read_csv(fid)
+        dz_lookup.set_index("OutputArea2011Code", inplace=True)
+        dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
+        dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
+        import pdb; pdb.set_trace()
+        with open(self.dz_lookup_cache_file, "wb") as pickle_fid:
+            pickle.dump(dz_lookup, pickle_fid)
+        return dz_lookup
+
     def load_constituency_lookup(self):
         if os.path.isfile(self.constituency_cache_file):
             with open(self.constituency_cache_file, "rb") as pickle_fid:
@@ -370,7 +393,11 @@ class Geocoder:
                                decimals=2, bar_length=100)
         return results
 
-    def reverse_geocode_llsoa(self, latlons):
+    def reverse_geocode_llsoa(self, latlons, datazones=False):
+        if not SHAPELY_AVAILABLE:
+            raise Exception("Geocode was unable to import the Shapely library, follow the "
+                            "installation instaructions at "
+                            "https://github.com/SheffieldSolar/Geocode")
         if self.llsoa_regions is None:
             self.llsoa_regions = self.load_llsoa_boundaries()
         results = []
@@ -388,6 +415,11 @@ class Geocoder:
                         print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     REVERSE-LLSOA",
                                        suffix="", decimals=2, bar_length=100)
                     break
+        if datazones:
+            if self.dz_lookup is None:
+                self.dz_lookup = self.load_datazone_lookup()
+            results = [llsoacd if llsoacd not in self.dz_lookup else self.dz_lookup[llsoacd]
+                       for llsoacd in results]
         return results
 
     def llsoa_centroid(self, llsoa):
@@ -484,29 +516,29 @@ def debug():
         print(f"[Geocode] {llsoa} :    {lat}, {lon}")
     sample_latlons = [
         (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
-        (50.409, -4.672), (52.940, -1.146), (57.060, -2.874)
+        (50.409, -4.672), (52.940, -1.146), (57.060, -2.874), (56.31, -4.)
     ]
     with Geocoder(progress_bar=True) as geocoder:
-        results = geocoder.reverse_geocode_llsoa(sample_latlons)
+        results = geocoder.reverse_geocode_llsoa(sample_latlons, datazones=True)
     for (lat, lon), llsoa in zip(sample_latlons, results):
         print(f"[Geocode] {lat}, {lon} :    {llsoa}")
-    sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
-                             "Inverness Nairn Badenoch and Strathspey", # missing commas :(
-                             "Dumfries and Galloway"]
-    with Geocoder(progress_bar=True) as geocoder:
-        results = geocoder.geocode_constituency(sample_constituencies)
-    for constituency, (lat, lon) in zip(sample_constituencies, results):
-        print(f"[Geocode] {constituency} :    {lat}, {lon}")
-    sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
-    with open(sample_file) as fid:
-        postcodes = [line.strip() for line in fid if line.strip()]
-    timerstart = TIME.time()
-    with Geocoder(progress_bar=True) as geocoder:
-        results = geocoder.geocode(postcodes=postcodes[:100])
-        for postcode, (lat, lon, status) in zip(postcodes, results):
-            print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
-                  f"{geocoder.status_codes[status]}")
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    # sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
+                             # "Inverness Nairn Badenoch and Strathspey", # missing commas :(
+                             # "Dumfries and Galloway"]
+    # with Geocoder(progress_bar=True) as geocoder:
+        # results = geocoder.geocode_constituency(sample_constituencies)
+    # for constituency, (lat, lon) in zip(sample_constituencies, results):
+        # print(f"[Geocode] {constituency} :    {lat}, {lon}")
+    # sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
+    # with open(sample_file) as fid:
+        # postcodes = [line.strip() for line in fid if line.strip()]
+    # timerstart = TIME.time()
+    # with Geocoder(progress_bar=True) as geocoder:
+        # results = geocoder.geocode(postcodes=postcodes[:100])
+        # for postcode, (lat, lon, status) in zip(postcodes, results):
+            # print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
+                  # f"{geocoder.status_codes[status]}")
+    # print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
 
 def main():
     options = parse_options()

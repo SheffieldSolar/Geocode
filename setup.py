@@ -24,7 +24,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="0.6.1",
+    version="0.6.2",
 
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
     long_description=long_description,
@@ -116,6 +116,7 @@ setup(
     entry_points={
         "console_scripts": [
             "geocode = geocode.geocode:main",
+            "latlons2llsoa = geocode.latlons2llsoa:main",
         ],
     },
     
