@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 import os
 import sys
@@ -295,7 +295,6 @@ class Geocoder:
         dz_lookup.set_index("OutputArea2011Code", inplace=True)
         dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
         dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
-        import pdb; pdb.set_trace()
         with open(self.dz_lookup_cache_file, "wb") as pickle_fid:
             pickle.dump(dz_lookup, pickle_fid)
         return dz_lookup
