@@ -9,6 +9,7 @@ Load a list of lat/lons from a CSV file and reverse-geocode them to LLSOA.
 import sys
 import os
 import argparse
+import time as TIME
 import pandas as pd
 
 from geocode import Geocoder
@@ -79,13 +80,16 @@ def parse_options():
     return options
 
 def main():
+    timerstart = TIME.time()
     options = parse_options()
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
-    with Geocoder() as geo:
+    with Geocoder(progress_bar=True) as geo:
+        # import pdb; pdb.set_trace()
         df["llsoacd"] = geo.reverse_geocode_llsoa(df[["latitude", "longitude"]].to_numpy(),
                                                   options.datazones)
     df.to_csv(options.outfile, index=False)
+    print(f"Finished, time taken: {TIME.time() - timerstart} seconds")
 
 if __name__ == "__main__":
     main()

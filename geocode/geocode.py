@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 
 import os
 import sys
@@ -402,6 +402,7 @@ class Geocoder:
         results = []
         tot = len(latlons)
         for i, (lat, lon) in enumerate(latlons):
+            success = False
             possible_matches = []
             for llsoacd in self.llsoa_regions:
                 bounds = self.llsoa_regions[llsoacd][1]
@@ -413,7 +414,10 @@ class Geocoder:
                     if self.progress_bar and (i % 10 == 0 or i == tot - 1):
                         print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     REVERSE-LLSOA",
                                        suffix="", decimals=2, bar_length=100)
+                    success = True
                     break
+            if not success:
+                results.append(None)
         if datazones:
             if self.dz_lookup is None:
                 self.dz_lookup = self.load_datazone_lookup()
