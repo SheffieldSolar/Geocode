@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 
 import os
 import sys
@@ -17,6 +17,7 @@ import time as TIME
 import argparse
 import zipfile
 import json
+import csv
 import glob
 import warnings
 import requests
@@ -224,6 +225,7 @@ class Geocoder:
         wgs84 = pyproj.Proj("EPSG:4326")
         osgb1936 = pyproj.Proj("EPSG:27700")
         codes, eastings, northings = [], [], []
+        datazones, dzeastings, dznorthings = [], [], []
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
             with nrs_zip.open("OutputArea2011_PWC_WGS84.csv", "r") as fid:
                 next(fid)
@@ -232,9 +234,20 @@ class Geocoder:
                     codes.append(code)
                     eastings.append(float(easting))
                     northings.append(float(northing))
+            with nrs_zip.open("SG_DataZone_Cent_2011.csv") as fid:
+                next(fid)
+                contents = [l.decode('UTF-8') for l in fid.readlines()]
+                for line in csv.reader(contents, quotechar="\"", delimiter=",", quoting=csv.QUOTE_ALL,
+                                       skipinitialspace=True):
+                    datazone, _, _, _, _, dzeast, dznorth = line
+                    datazones.append(datazone)
+                    dzeastings.append(float(dzeast.strip("\"")))
+                    dznorthings.append(float(dznorth.strip("\"")))
         lats, lons = pyproj.transform(osgb1936, wgs84, eastings, northings)
+        dzlats, dzlons = pyproj.transform(osgb1936, wgs84, dzeastings, dznorthings)
         scots_lookup = {code: (lat, lon) for code, lat, lon in zip(codes, lats, lons)}
-        llsoa_lookup = {**engwales_lookup , **scots_lookup}
+        scots_dz_lookup = {dz: (lat, lon) for dz, lat, lon in zip(datazones, dzlats, dzlons)}
+        llsoa_lookup = {**engwales_lookup , **scots_lookup, **scots_dz_lookup}
         with open(self.llsoa_cache_file, "wb") as pickle_fid:
             pickle.dump(llsoa_lookup, pickle_fid)
         self.myprint(f"    -> Extracted and pickled to '{self.llsoa_cache_file}'")
@@ -512,7 +525,7 @@ def parse_options():
 
 def debug():
     sample_llsoas = ["E01025397", "E01003065", "E01017548", "E01023301", "E01021142", "E01019037",
-                     "E01013873", "S00092417"]
+                     "E01013873", "S00092417", "S01012390"]
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode_llsoa(sample_llsoas)
     for llsoa, (lat, lon) in zip(sample_llsoas, results):
