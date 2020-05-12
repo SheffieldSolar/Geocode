@@ -183,6 +183,32 @@ It is also possible to avoid using the context manager, but if doing so you shou
 
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
 
+## Command Line Utilities ##
+
+### latlons2llsoa ###
+
+This utility can be used to load a CSV file containing latitudes and longitudes and to reverse-geocode them to LLSOAs (optionally switching to Data Zones in Scotland):
+
+```
+>> latlons2llsoa -h
+usage: latlons2llsoa [-h] -f </path/to/file> -o </path/to/file> [--datazones]
+
+This is a command line interface (CLI) for the latlons2llsoa.py module
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f </path/to/file>, --input-file </path/to/file>
+                        Specify a CSV file containing a list of latitudes and
+                        longitudes to be reverse-geocoded. The file must
+                        contain the columns 'latitude' and 'longitude' (it can
+                        contain others, all of which will be kept).
+  -o </path/to/file>, --output-file </path/to/file>
+                        Specify an output file.
+  --datazones           Specify to use Data Zones in Scotland.
+
+Jamie Taylor, 2020-04-16
+```
+
 ## Documentation ##
 
 * Coming soon
