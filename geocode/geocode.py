@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 
 import os
 import sys
@@ -40,6 +40,7 @@ class Geocoder:
     """Use Code Point Open and GMaps to geocode addresses and postcodes."""
     def __init__(self, quiet=False, progress_bar=False, skip_setup=False, prefix=""):
         self.quiet = quiet
+        self.prefix = prefix
         version_string = __version__.replace(".", "-")
         self.gmaps_dir = os.path.join(SCRIPT_DIR, "google_maps")
         self.gmaps_cache_file = os.path.join(self.gmaps_dir,
@@ -81,7 +82,6 @@ class Geocoder:
             self.gmaps_cache = self.load_gmaps_cache()
         self.timer = TIME.time()
         self.progress_bar = progress_bar
-        self.prefix = prefix
         self.cache_file = os.path.join(self.cache_dir, "cache_{}.p".format(version_string))
         self.cache = self.load_cache()
         self.status_codes = {
@@ -182,10 +182,9 @@ class Geocoder:
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
-        wgs84 = pyproj.Proj("EPSG:4326")
-        osgb1936 = pyproj.Proj("EPSG:27700")
-        lats, lons = pyproj.transform(osgb1936, wgs84, cpo.loc[nn_indices, ("Eastings")].to_numpy(),
-                                      cpo.loc[nn_indices, ("Northings")].to_numpy())
+        proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
+        lats, lons = proj.transform(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
+                                    cpo.loc[nn_indices, ("Northings")].to_numpy())
         cpo.loc[nn_indices, "longitude"] = lons
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()
@@ -222,8 +221,6 @@ class Geocoder:
                 retries += 1
         if not success:
             raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
-        wgs84 = pyproj.Proj("EPSG:4326")
-        osgb1936 = pyproj.Proj("EPSG:27700")
         codes, eastings, northings = [], [], []
         datazones, dzeastings, dznorthings = [], [], []
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
@@ -243,8 +240,9 @@ class Geocoder:
                     datazones.append(datazone)
                     dzeastings.append(float(dzeast.strip("\"")))
                     dznorthings.append(float(dznorth.strip("\"")))
-        lats, lons = pyproj.transform(osgb1936, wgs84, eastings, northings)
-        dzlats, dzlons = pyproj.transform(osgb1936, wgs84, dzeastings, dznorthings)
+        proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
+        lats, lons = proj.transform(eastings, northings)
+        dzlats, dzlons = proj.transform(dzeastings, dznorthings)
         scots_lookup = {code: (lat, lon) for code, lat, lon in zip(codes, lats, lons)}
         scots_dz_lookup = {dz: (lat, lon) for dz, lat, lon in zip(datazones, dzlats, dzlons)}
         llsoa_lookup = {**engwales_lookup , **scots_lookup, **scots_dz_lookup}
@@ -470,7 +468,7 @@ class Geocoder:
         if not self.quiet:
             if time_section == "stop":
                 msg += " ({:.1f} seconds)".format(TIME.time() - self.timer)
-            print("[Geocode] " + msg)
+            print(self.prefix + "[Geocode] " + msg)
             if time_section == "start":
                 self.timer = TIME.time()
 
