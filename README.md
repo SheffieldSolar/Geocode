@@ -181,6 +181,7 @@ Jamie Taylor, 2020-04-16
 This utility can be used to load a CSV file containing latitudes and longitudes and to reverse-geocode them to GSPs/GNodes.
 
 ```
+>> latlons2gsp -h
 usage: latlons2gsp.py [-h] -f </path/to/file> -o </path/to/file>
 
 This is a command line interface (CLI) for the latlons2gsp.py module
