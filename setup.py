@@ -117,7 +117,7 @@ setup(
         "console_scripts": [
             "geocode = geocode.geocode:main",
             "latlons2llsoa = geocode.latlons2llsoa:main",
-            "latlons2gsp - geocode.latlons2gsp:main",
+            "latlons2gsp = geocode.latlons2gsp:main",
         ],
     },
     
