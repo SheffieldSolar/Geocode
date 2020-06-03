@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 import os
 import sys
@@ -45,13 +45,12 @@ class Geocoder:
         self.prefix = prefix
         version_string = __version__.replace(".", "-")
         self.gmaps_dir = os.path.join(SCRIPT_DIR, "google_maps")
-        self.gmaps_cache_file = os.path.join(self.gmaps_dir,
-                                             "gmaps_cache_{}.p".format(version_string))
+        self.gmaps_cache_file = os.path.join(self.gmaps_dir, "gmaps_cache.p")
         self.cpo_dir = os.path.join(SCRIPT_DIR, "code_point_open")
         self.cache_dir = os.path.join(SCRIPT_DIR, "cache")
         self.cpo_zipfile = os.path.join(self.cpo_dir, "codepo_gb.zip")
         self.cpo_cache_file = os.path.join(self.cpo_dir,
-                                           "code_point_open_{}.p".format(version_string))
+                                           f"code_point_open_{version_string}.p")
         self.ons_dir = os.path.join(SCRIPT_DIR, "ons_nrs")
         self.eso_dir = os.path.join(SCRIPT_DIR, "ngeso")
         if not os.path.isdir(self.ons_dir):
@@ -59,25 +58,24 @@ class Geocoder:
         if not os.path.isdir(self.eso_dir):
             os.mkdir(self.eso_dir)
         self.llsoa_cache_file = os.path.join(self.ons_dir,
-                                             "llsoa_centroids_{}.p".format(version_string))
+                                             f"llsoa_centroids_{version_string}.p")
         self.llsoa_boundaries_cache_file = os.path.join(
-            self.ons_dir, "llsoa_boundaries_{}.p".format(version_string)
+            self.ons_dir, f"llsoa_boundaries_{version_string}.p"
         )
         self.gsp_boundaries_cache_file = os.path.join(
-            self.eso_dir, "gsp_boundaries_{}.p".format(version_string)
+            self.eso_dir, f"gsp_boundaries_{version_string}.p"
         )
         self.gsp_lookup_cache_file = os.path.join(
-            self.eso_dir, "gsp_lookup_{}.p".format(version_string)
+            self.eso_dir, f"gsp_lookup_{version_string}.p"
         )
         self.dz_lookup_cache_file = os.path.join(self.ons_dir,
-                                                 "datazone_lookup_{}.p".format(version_string))
+                                                 f"datazone_lookup_{version_string}.p")
         self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
                                                      "constituency_centroids.psv")
         self.constituency_cache_file = os.path.join(self.gov_dir,
-                                                    "constituency_centroids_{}.p"
-                                                    .format(version_string))
+                                                    f"constituency_centroids_{version_string}.p")
         self.gmaps_key_file = os.path.join(self.gmaps_dir, "key.txt")
         self.gmaps_cache = None
         self.llsoa_lookup = None
@@ -93,7 +91,7 @@ class Geocoder:
         self.gmaps_cache = None
         self.timer = TIME.time()
         self.progress_bar = progress_bar
-        self.cache_file = os.path.join(self.cache_dir, "cache_{}.p".format(version_string))
+        self.cache_file = os.path.join(self.cache_dir, f"cache_{version_string}.p")
         self.cache = self.load_cache()
         self.status_codes = {
             0: "Failed",
@@ -112,14 +110,17 @@ class Geocoder:
         self.flush_gmaps_cache()
         self.flush_cache()
 
-    def clear_cache(self):
+    def clear_cache(self, delete_gmaps_cache=None):
         """Clear any cache files from the installation directory including from old versions."""
         cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p"))
         for cache_file in cache_files:
             os.remove(cache_file)
-        gmaps_cache_files = glob.glob(os.path.join(self.gmaps_dir, "gmaps_cache_*.p"))
-        for gmaps_cache_file in gmaps_cache_files:
-            os.remove(gmaps_cache_file)
+        if delete_gmaps_cache is None:
+            delete_gmaps_cache = query_yes_no("Do you want to delete the GMaps cache?", "no")
+        if delete_gmaps_cache:
+            gmaps_cache_files = glob.glob(os.path.join(self.gmaps_dir, "gmaps_cache.p"))
+            for gmaps_cache_file in gmaps_cache_files:
+                os.remove(gmaps_cache_file)
         cpo_cache_files = glob.glob(os.path.join(self.cpo_dir, "code_point_open_*.p"))
         for cpo_cache_file in cpo_cache_files:
             os.remove(cpo_cache_file)
@@ -797,6 +798,46 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=2, bar_lengt
         sys.stdout.write("\n")
         sys.stdout.flush()
 
+def query_yes_no(question, default="yes"):
+    """
+    Ask a yes/no question via input() and return the answer as boolean.
+
+    Parameters
+    ----------
+    `question` : string
+        The question presented to the user.
+    `default` : string
+        The presumed answer if the user just hits <Enter>. It must be "yes" (the default), "no" or
+        None (meaning an answer is required of the user).
+    Returns
+    -------
+    boolean
+        Return value is True for "yes" or False for "no".
+    Notes
+    -----
+    See http://stackoverflow.com/a/3041990
+    """
+    valid = {"yes": True, "y": True, "ye": True,
+             "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n")
+
 def parse_options():
     """Parse command line options."""
     parser = argparse.ArgumentParser(description=("This is a command line interface (CLI) for "
@@ -836,7 +877,7 @@ def debug():
     for (lat, lon), region_id, extra in zip(sample_latlons, results, results_more):
         print(f"[Geocode] {lat}, {lon} :    {region_id}")
         for e in extra:
-            print("[Geocode]         {}".format(", ".join(map(str, e.items()))))
+            print(f"[Geocode]         {e}")
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]

@@ -31,7 +31,7 @@ def main():
             print(f"LATLON: {lat:.3f}, {lon:.3f}:")
             print(f"    {region_id}")
             for e in extra:
-                print("    {}".format(", ".join(map(str, e.items()))))
+                print(f"        {e}")
         # Geocode some Constituencies...
         constituencies = ["Sheffield Central", "Sheffield Hallam"]
         results = geocoder.geocode_constituency(constituencies)

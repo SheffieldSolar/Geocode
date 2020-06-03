@@ -17,7 +17,7 @@ class sp2tsTestCase(unittest.TestCase):
     """Tests for `geocode.py`."""
     def setUp(self):
         with Geocoder(quiet=True) as geo:
-            geo.clear_cache()
+            geo.clear_cache(delete_gmaps_cache=True)
 
     def test_geocode_llsoa(self):
         """
