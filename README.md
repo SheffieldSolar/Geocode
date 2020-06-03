@@ -213,6 +213,15 @@ You may also wish to clear all locally cached data by running the following comm
 geocode --clear-cache
 ```
 
+## Developers
+
+### Running Tests
+
+```
+>> cd <root-dir>
+>> python -m unittest Tests.test_geocode
+```
+
 ## Appendix
 
 ### Code Point Open
