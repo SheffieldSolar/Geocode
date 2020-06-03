@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 import os
 import sys
