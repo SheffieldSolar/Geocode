@@ -2,7 +2,7 @@
 
 Geocode various geographical entitities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.7.2*
+*Latest Version: 0.7.3*
 
 ## What is this repository for?
 
@@ -19,7 +19,7 @@ Geocode various geographical entitities including postcodes and LLSOAs. Reverse-
 
 ## How do I get set up?
 
-Developed and tested with Python 3.6, should work for 3.6+.
+Developed and tested with Python 3.7, should work for 3.6+.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
@@ -32,23 +32,32 @@ Check that the installation was successful by running the following command from
 This will print the helper for the limited command line interface which provides tools to help get set up and to clear the cache when needed:
 
 ```
-usage: geocode [-h] [--clear-cache] [--debug]
-               [--load-cpo-zip </path/to/zip-file>]
-               [--load-gmaps-key </path/to/zip-file>]
+usage: geocode.py [-h] [--clear-cache] [--debug] [--setup]
+                  [--load-cpo-zip </path/to/zip-file>]
+                  [--load-gmaps-key <gmaps-api-key>]
 
-This is a command line interface (CLI) for the Geocode module.
+This is a command line interface (CLI) for the Geocode module version 0.7.2.
 
 optional arguments:
   -h, --help            show this help message and exit
   --clear-cache         Specify to delete the cache files.
   --debug               Geocode some sample postcodes/addresses/LLSOAs.
+  --setup               Force download all datasets to local cache (useful if
+                        running inside a Docker container i.e. run this as
+                        part of image build).
   --load-cpo-zip </path/to/zip-file>
                         Load the Code Point Open data from a local zip file.
-  --load-gmaps-key </path/to/zip-file>
+  --load-gmaps-key <gmaps-api-key>
                         Load a Google Maps API key.
 
 Jamie Taylor, 2019-10-08
 ```
+
+No additional set up is needed at this stage - the required datasets will be downloaded (or extracted from the packaged data) the first time you use the associated method. If you want to force the Geocode library to download/extract all data, you can run the following command:
+
+```>> geocode --setup```
+
+This is especially useful if you are installing / running the library inside a container - using the above command you can download the data once during the image build rather than have to re-download every time the container is destroyed.
 
 **Important**
 

@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.2"
+__version__ = "0.7.3"
 
 import os
 import sys
@@ -143,6 +143,15 @@ class Geocoder:
                                                           "constituency_centroids_*.p"))
         for constituency_cache_file in constituency_cache_files:
             os.remove(constituency_cache_file)
+
+    def force_setup(self):
+        self.load_code_point_open(force_reload=False)
+        self.load_llsoa_lookup()
+        self.load_llsoa_boundaries()
+        self.load_gsp_boundaries()
+        self.load_gsp_lookup()
+        self.load_datazone_lookup()
+        self.load_constituency_lookup()
 
     def load_gmaps_key(self):
         """Load the user's GMaps API key from installation directory."""
@@ -847,6 +856,10 @@ def parse_options():
                         required=False, help="Specify to delete the cache files.")
     parser.add_argument("--debug", dest="debug", action="store_true",
                         required=False, help="Geocode some sample postcodes/addresses/LLSOAs.")
+    parser.add_argument("--setup", dest="setup", action="store_true",
+                        required=False, help="Force download all datasets to local cache (useful "
+                                             "if running inside a Docker container i.e. run this "
+                                             "as part of image build).")
     parser.add_argument("--load-cpo-zip", dest="cpo_zip", action="store", type=str,
                         required=False, default=None, metavar="</path/to/zip-file>",
                         help="Load the Code Point Open data from a local zip file.")
@@ -913,6 +926,9 @@ def main():
                 fid.write(options.gmaps_key)
             if geocoder.load_gmaps_key() == options.gmaps_key:
                 print(f"[Geocode]     -> GMaps key saved to '{geocoder.gmaps_key_file}'")
+    if options.setup:
+        with Geocoder() as geocoder:
+            geocoder.force_setup()
     if options.debug:
         debug()
 
