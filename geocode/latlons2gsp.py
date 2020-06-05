@@ -47,8 +47,11 @@ def main():
     # Following code is a bit clunky and performance needs improving
     output = []
     for i, row in df.iterrows():
-        for l in extra[i]: # There might be more than one match e.g. where GSP:GNODE is ONE:MANY
-            output.append(row.tolist() + list(l.values()))
+        if extra[i] is not None:
+            for l in extra[i]: # There might be more than one match e.g. where GSP:GNODE is ONE:MANY
+                output.append(row.tolist() + list(l.values()))
+        else:
+            output.append(row.tolist() + [None] * len(list(l.values())))
     columns = row.index.to_list() + list(l.keys())
     output = pd.DataFrame(output, columns=columns)
     output.to_csv(options.outfile, index=False)

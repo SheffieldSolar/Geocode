@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.3"
+__version__ = "0.7.4"
 
 import os
 import sys
@@ -30,6 +30,7 @@ import pyproj
 import shapefile
 try:
     from shapely.geometry import shape, Point
+    from shapely.ops import cascaded_union
     SHAPELY_AVAILABLE = True
 except ImportError:
     warnings.warn("Failed to import Shapely library - you will not be able to reverse-geocode! See "
@@ -92,6 +93,7 @@ class Geocoder:
         self.timer = TIME.time()
         self.progress_bar = progress_bar
         self.cache_file = os.path.join(self.cache_dir, f"cache_{version_string}.p")
+        self.clear_cache(delete_gmaps_cache=False, old_versions_only=True)
         self.cache = self.load_cache()
         self.status_codes = {
             0: "Failed",
@@ -110,7 +112,7 @@ class Geocoder:
         self.flush_gmaps_cache()
         self.flush_cache()
 
-    def clear_cache(self, delete_gmaps_cache=None):
+    def clear_cache(self, delete_gmaps_cache=None, old_versions_only=False):
         """Clear any cache files from the installation directory including from old versions."""
         cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p"))
         for cache_file in cache_files:
@@ -121,28 +123,17 @@ class Geocoder:
             gmaps_cache_files = glob.glob(os.path.join(self.gmaps_dir, "gmaps_cache.p"))
             for gmaps_cache_file in gmaps_cache_files:
                 os.remove(gmaps_cache_file)
-        cpo_cache_files = glob.glob(os.path.join(self.cpo_dir, "code_point_open_*.p"))
-        for cpo_cache_file in cpo_cache_files:
-            os.remove(cpo_cache_file)
-        llsoa_cache_files = glob.glob(os.path.join(self.ons_dir, "llsoa_centroids_*.p"))
-        for llsoa_cache_file in llsoa_cache_files:
-            os.remove(llsoa_cache_file)
-        llsoa_boundaries_cache_files = glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p"))
-        for llsoa_boundaries_cache_file in llsoa_boundaries_cache_files:
-            os.remove(llsoa_boundaries_cache_file)
-        gsp_boundaries_cache_files = glob.glob(os.path.join(self.eso_dir, "gsp_boundaries_*.p"))
-        for gsp_boundaries_cache_file in gsp_boundaries_cache_files:
-            os.remove(gsp_boundaries_cache_file)
-        gsp_lookup_cache_files = glob.glob(os.path.join(self.eso_dir, "gsp_lookup_*.p"))
-        for gsp_lookup_cache_file in gsp_lookup_cache_files:
-            os.remove(gsp_lookup_cache_file)
-        dz_lookup_cache_files = glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p"))
-        for dz_lookup_cache_file in dz_lookup_cache_files:
-            os.remove(dz_lookup_cache_file)
-        constituency_cache_files = glob.glob(os.path.join(self.gov_dir,
-                                                          "constituency_centroids_*.p"))
-        for constituency_cache_file in constituency_cache_files:
-            os.remove(constituency_cache_file)
+        cache_files = glob.glob(os.path.join(self.cpo_dir, "code_point_open_*.p")) + \
+                      glob.glob(os.path.join(self.ons_dir, "llsoa_centroids_*.p")) + \
+                      glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p")) + \
+                      glob.glob(os.path.join(self.eso_dir, "gsp_boundaries_*.p")) + \
+                      glob.glob(os.path.join(self.eso_dir, "gsp_lookup_*.p")) + \
+                      glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p")) + \
+                      glob.glob(os.path.join(self.gov_dir, "constituency_centroids_*.p"))
+        for cache_file in cache_files:
+            if old_versions_only and __version__.replace(".", "-") in cache_file:
+                continue
+            os.remove(cache_file)
 
     def force_setup(self):
         self.load_code_point_open(force_reload=False)
@@ -341,12 +332,18 @@ class Geocoder:
         success, api_response = self.fetch_from_api(eso_url)
         if success:
             raw = json.loads(api_response.text)
-            gsp_regions = {f["properties"]["RegionID"]: shape(f["geometry"])
-                           for f in raw["features"]}
+            gsp_regions = {}
+            for f in raw["features"]:
+                region_id = f["properties"]["RegionID"]
+                if region_id not in gsp_regions:
+                    gsp_regions[region_id] = shape(f["geometry"])
+                else: # Sometimes a region is in multiple pieces due to PES boundary e.g. Axminster
+                    gsp_regions[region_id] = cascaded_union([gsp_regions[region_id],
+                                                             shape(f["geometry"])])
         else:
             raise Exception("Encountered an error while extracting GSP region data from ESO API.")
-        gsp_regions = {gsp_id: (gsp_regions[gsp_id], gsp_regions[gsp_id].bounds)
-                       for gsp_id in gsp_regions}
+        gsp_regions = {region_id: (gsp_regions[region_id], gsp_regions[region_id].bounds)
+                       for region_id in gsp_regions}
         with open(self.gsp_boundaries_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_regions, pickle_fid)
         self.myprint(f"    -> Extracted and pickled to '{self.gsp_boundaries_cache_file}'")
@@ -634,7 +631,7 @@ class Geocoder:
         Parameters
         ----------
         `coords` : list of tuples
-            A list of tuples containing (x, y).
+            A list of tuples containing (y, x).
         `regions` : dict
             Dict whose keys are the region IDs and whose values are a tuple containing:
             (region_boundary, region_bounds). The region boundary must be a Shapely
@@ -712,8 +709,9 @@ class Geocoder:
         results = self.reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
         if self.gsp_lookup is None:
             self.gsp_lookup = self.load_gsp_lookup()
-        results_more = [self.gsp_lookup[self.gsp_lookup.region_id == r].to_dict(orient='records')
-                        for r in results]
+        reg_lookup = {r: self.gsp_lookup[self.gsp_lookup.region_id == r].to_dict(orient='records')
+                         for r in list(set(results))}
+        results_more = [reg_lookup[r] if r is not None else None for r in results]
         return results, results_more
 
     def llsoa_centroid(self, llsoa):
@@ -873,41 +871,52 @@ def debug():
     """Useful for debugging code (runs each public method in turn with sample inputs)."""
     sample_llsoas = ["E01025397", "E01003065", "E01017548", "E01023301", "E01021142", "E01019037",
                      "E01013873", "S00092417", "S01012390"]
+    timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode_llsoa(sample_llsoas)
+    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for llsoa, (lat, lon) in zip(sample_llsoas, results):
         print(f"[Geocode] {llsoa} :    {lat}, {lon}")
     sample_latlons = [
         (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
         (50.409, -4.672), (52.940, -1.146), (57.060, -2.874), (56.31, -4.)
     ]
+    timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.reverse_geocode_llsoa(sample_latlons, datazones=True)
+    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for (lat, lon), llsoa in zip(sample_latlons, results):
         print(f"[Geocode] {lat}, {lon} :    {llsoa}")
+    sample_file = os.path.join(SCRIPT_DIR, "sample_latlons.txt")
+    with open(sample_file) as fid:
+        sample_latlons = [tuple(map(float, line.strip().split(",")))
+                          for line in fid if line.strip()][:10]
+    timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results, results_more = geocoder.reverse_geocode_gsp(sample_latlons)
+    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for (lat, lon), region_id, extra in zip(sample_latlons, results, results_more):
         print(f"[Geocode] {lat}, {lon} :    {region_id}")
-        for e in extra:
-            print(f"[Geocode]         {e}")
+        print(f"[Geocode]         {extra}")
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]
+    timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode_constituency(sample_constituencies)
+    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
         print(f"[Geocode] {constituency} :    {lat}, {lon}")
     sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
     with open(sample_file) as fid:
-        postcodes = [line.strip() for line in fid if line.strip()]
+        postcodes = [line.strip() for line in fid if line.strip()][:10]
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
-        results = geocoder.geocode(postcodes=postcodes[:100])
-        for postcode, (lat, lon, status) in zip(postcodes, results):
-            print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
-                  f"{geocoder.status_codes[status]}")
+        results = geocoder.geocode(postcodes=postcodes)
     print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    for postcode, (lat, lon, status) in zip(postcodes, results):
+        print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
+              f"{geocoder.status_codes[status]}")
 
 def main():
     """Run the Command Line Interface."""
