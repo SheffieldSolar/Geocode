@@ -2,7 +2,7 @@
 
 Geocode various geographical entitities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.7.5*
+*Latest Version: 0.8.0*
 
 ## What is this repository for?
 
@@ -208,6 +208,52 @@ optional arguments:
                         Specify an output file.
 
 Jamie Taylor, 2020-05-29
+```
+
+#### postcodes2latlon
+
+This utility can be used to load a CSV file containing postcodes and to geocode them to lat/lons.
+
+```
+>> postcodes2latlon -h
+usage: postcodes2latlon.py [-h] -f </path/to/file> -o </path/to/file>
+
+This is a command line interface (CLI) for the postcodes2latlon.py module
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f </path/to/file>, --input-file </path/to/file>
+                        Specify a CSV file containing a list of postcodes to
+                        be geocoded. The file must contain the column
+                        'postcode' (it can contain others, all of which will
+                        be kept).
+  -o </path/to/file>, --output-file </path/to/file>
+                        Specify an output file.
+
+Jamie Taylor, 2020-06-12
+```
+
+#### bng2latlon
+
+This utility can be used to load a CSV file containing eastings and northings and to convert them to lat/lons.
+
+```
+>> bng2latlon -h
+usage: bng2latlon.py [-h] -f </path/to/file> -o </path/to/file>
+
+This is a command line interface (CLI) for the bng2latlon.py module
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f </path/to/file>, --input-file </path/to/file>
+                        Specify a CSV file containing a list of eastings and
+                        northings to be converted. The file must contain the
+                        columns 'eastings' and 'northings' (it can contain
+                        others, all of which will be kept).
+  -o </path/to/file>, --output-file </path/to/file>
+                        Specify an output file.
+
+Jamie Taylor, 2020-06-12
 ```
 
 ## Documentation

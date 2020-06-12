@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.5"
+__version__ = "0.8.0"
 
 import os
 import sys
@@ -215,9 +215,8 @@ class Geocoder:
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
-        proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
-        lons, lats = proj.transform(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
-                                    cpo.loc[nn_indices, ("Northings")].to_numpy())
+        lons, lats = self.bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
+                                     cpo.loc[nn_indices, ("Northings")].to_numpy())
         cpo.loc[nn_indices, "longitude"] = lons
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()
@@ -277,9 +276,8 @@ class Geocoder:
                     datazones.append(datazone)
                     dzeastings.append(float(dzeast.strip("\"")))
                     dznorthings.append(float(dznorth.strip("\"")))
-        proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
-        lons, lats = proj.transform(eastings, northings)
-        dzlons, dzlats = proj.transform(dzeastings, dznorthings)
+        lons, lats = self.bng2latlon(eastings, northings)
+        dzlons, dzlats = self.bng2latlon(dzeastings, dznorthings)
         scots_lookup = {code: (lat, lon) for code, lon, lat in zip(codes, lons, lats)}
         scots_dz_lookup = {dz: (lat, lon) for dz, lon, lat in zip(datazones, dzlons, dzlats)}
         llsoa_lookup = {**engwales_lookup, **scots_lookup, **scots_dz_lookup}
@@ -357,8 +355,8 @@ class Geocoder:
 
     def load_dno_boundaries(self):
         """
-        Load the DNO License Area boundaries, either from local cache if available, else fetch from ESO
-        Data Portal API.
+        Load the DNO License Area boundaries, either from local cache if available, else fetch from
+        ESO Data Portal API.
         """
         if os.path.isfile(self.dno_boundaries_cache_file):
             with open(self.dno_boundaries_cache_file, "rb") as pickle_fid:
@@ -754,17 +752,16 @@ class Geocoder:
                             "https://github.com/SheffieldSolar/Geocode")
         if self.gsp_regions is None:
             self.gsp_regions = self.load_gsp_boundaries()
-        proj = pyproj.Transformer.from_crs(4326, 27700, always_xy=True)
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
         # Rather than re-project the region boundaries, re-project the input lat/lons
         # (easier, but slightly slower if reverse-geocoding a lot)
-        eastings, northings = proj.transform(lons, lats)
+        eastings, northings = self.latlon2bng(lons, lats)
         results = self.reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
         if self.gsp_lookup is None:
             self.gsp_lookup = self.load_gsp_lookup()
         reg_lookup = {r: self.gsp_lookup[self.gsp_lookup.region_id == r].to_dict(orient='records')
-                         for r in list(set(results))}
+                      for r in list(set(results))}
         results_more = [reg_lookup[r] if r is not None else None for r in results]
         return results, results_more
 
@@ -818,6 +815,64 @@ class Geocoder:
             return self.constituency_lookup[match_str]
         except KeyError:
             return None, None
+
+    def bng2latlon(self, eastings, northings):
+        """
+        Convert Eastings and Northings (a.k.a British National Grid a.k.a OSGB 1936) to latitudes
+        and longitudes (WGS 1984).
+
+        Parameters
+        ----------
+        `eastings` : iterable of floats or ints
+            Easting co-ordinates.
+        `northings` : iterable of floats or ints
+            Northing co-ordinates.
+
+        Returns
+        -------
+        `lons` : list of floats
+            Corresponding longitude co-ordinates in WGS 1984 CRS.
+        `lats` : list of floats
+            Corresponding latitude co-ordinates in WGS 1984 CRS.
+
+        Notes
+        -----
+        Be careful! This method uses the same convention of ordering (eastings, northings) and
+        (lons, lats) as pyproj i.e. (x, y). Elsewhere in this module the convention is typically
+        (lats, lons) due to personal preference.
+        """
+        proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
+        lons, lats = proj.transform(eastings, northings)
+        return lons, lats
+
+    def latlon2bng(self, lons, lats):
+        """
+        Convert latitudes and longitudes (WGS 1984) to Eastings and Northings (a.k.a British
+        National Grid a.k.a OSGB 1936).
+
+        Parameters
+        ----------
+        `lons` : list of floats
+            Corresponding longitude co-ordinates in WGS 1984 CRS.
+        `lats` : list of floats
+            Corresponding latitude co-ordinates in WGS 1984 CRS.
+
+        Returns
+        -------
+        `eastings` : iterable of floats or ints
+            Easting co-ordinates.
+        `northings` : iterable of floats or ints
+            Northing co-ordinates.
+
+        Notes
+        -----
+        Be careful! This method uses the same convention of ordering (eastings, northings) and
+        (lons, lats) as pyproj i.e. (x, y). Elsewhere in this module the convention is typically
+        (lats, lons) due to personal preference.
+        """
+        proj = pyproj.Transformer.from_crs(4326, 27700, always_xy=True)
+        eastings, northings = proj.transform(lons, lats)
+        return eastings, northings
 
     def myprint(self, msg, time_section=None):
         """Use this function to print updates unless class attribute quiet is set to True."""
