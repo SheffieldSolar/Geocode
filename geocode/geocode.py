@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.7.4"
+__version__ = "0.7.5"
 
 import os
 import sys
@@ -66,6 +66,9 @@ class Geocoder:
         self.gsp_boundaries_cache_file = os.path.join(
             self.eso_dir, f"gsp_boundaries_{version_string}.p"
         )
+        self.dno_boundaries_cache_file = os.path.join(
+            self.eso_dir, f"dno_boundaries_{version_string}.p"
+        )
         self.gsp_lookup_cache_file = os.path.join(
             self.eso_dir, f"gsp_lookup_{version_string}.p"
         )
@@ -82,6 +85,7 @@ class Geocoder:
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.gsp_regions = None
+        self.dno_regions = None
         self.gsp_lookup = None
         self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
@@ -127,6 +131,7 @@ class Geocoder:
                       glob.glob(os.path.join(self.ons_dir, "llsoa_centroids_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p")) + \
                       glob.glob(os.path.join(self.eso_dir, "gsp_boundaries_*.p")) + \
+                      glob.glob(os.path.join(self.eso_dir, "dno_boundaries_*.p")) + \
                       glob.glob(os.path.join(self.eso_dir, "gsp_lookup_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p")) + \
                       glob.glob(os.path.join(self.gov_dir, "constituency_centroids_*.p"))
@@ -143,6 +148,7 @@ class Geocoder:
         self.load_gsp_lookup()
         self.load_datazone_lookup()
         self.load_constituency_lookup()
+        self.load_dno_boundaries()
 
     def load_gmaps_key(self):
         """Load the user's GMaps API key from installation directory."""
@@ -348,6 +354,54 @@ class Geocoder:
             pickle.dump(gsp_regions, pickle_fid)
         self.myprint(f"    -> Extracted and pickled to '{self.gsp_boundaries_cache_file}'")
         return gsp_regions
+
+    def load_dno_boundaries(self):
+        """
+        Load the DNO License Area boundaries, either from local cache if available, else fetch from ESO
+        Data Portal API.
+        """
+        if os.path.isfile(self.dno_boundaries_cache_file):
+            with open(self.dno_boundaries_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        self.myprint("Extracting the DNO License Area boundary data from NGESO's Data Portal API "
+                     "(this only needs to be done once)...")
+        eso_url = "http://data.nationalgrideso.com/backend/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
+        success, api_response = self.fetch_from_api(eso_url)
+        if success:
+            raw = json.loads(api_response.text)
+            dno_regions = {}
+            dno_names = {}
+            for f in raw["features"]:
+                region_id = f["properties"]["ID"]
+                dno_regions[region_id] = shape(f["geometry"])
+                dno_names[region_id] = (f["properties"]["Name"], f["properties"]["LongName"])
+        else:
+            raise Exception("Encountered an error while extracting DNO License Area boundary data "
+                            "from ESO API.")
+        dno_regions = {region_id: (dno_regions[region_id], dno_regions[region_id].bounds)
+                       for region_id in dno_regions}
+        with open(self.dno_boundaries_cache_file, "wb") as pickle_fid:
+            pickle.dump((dno_regions, dno_names), pickle_fid)
+        self.myprint(f"    -> Extracted and pickled to '{self.dno_boundaries_cache_file}'")
+        return dno_regions, dno_names
+
+    def get_dno_regions(self):
+        """
+        Get the DNO License Area Boundaries from the ESO Data Portal.
+
+        Returns
+        -------
+        `dno_regions` : dict
+            Dict whose keys are the region IDs and whose values are a tuple containing:
+            (region_boundary, region_bounds). The region boundary is a Shapely
+            Polygon/MultiPolygon and the bounds are a tuple containing (xmin, ymin, xmax, ymax).
+        `dno_names` : dict
+            Dict whose keys are the region IDs and whose values are a tuple containing:
+            (Name, LongName).
+        """
+        if self.dno_regions is None:
+            self.dno_regions = self.load_dno_boundaries()
+        return self.dno_regions
 
     def load_gsp_lookup(self):
         """Load the lookup of Region <-> GSP <-> GNode."""
