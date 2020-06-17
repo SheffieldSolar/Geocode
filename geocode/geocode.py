@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 
 import os
 import sys
@@ -816,7 +816,8 @@ class Geocoder:
         except KeyError:
             return None, None
 
-    def bng2latlon(self, eastings, northings):
+    @staticmethod
+    def bng2latlon(eastings, northings):
         """
         Convert Eastings and Northings (a.k.a British National Grid a.k.a OSGB 1936) to latitudes
         and longitudes (WGS 1984).
@@ -845,7 +846,8 @@ class Geocoder:
         lons, lats = proj.transform(eastings, northings)
         return lons, lats
 
-    def latlon2bng(self, lons, lats):
+    @staticmethod
+    def latlon2bng(lons, lats):
         """
         Convert latitudes and longitudes (WGS 1984) to Eastings and Northings (a.k.a British
         National Grid a.k.a OSGB 1936).
