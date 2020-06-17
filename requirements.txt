@@ -1,8 +1,8 @@
 numpy
-pandas
+pandas>=1.0.0
 googlemaps
 convertbng
 requests
-shapely
+shapely>=1.7.0
 pyshp
-pyproj
+pyproj>=2.6.0
