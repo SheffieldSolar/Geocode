@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 
 import os
 import sys
@@ -304,7 +304,7 @@ class Geocoder:
         success, api_response = self.fetch_from_api(ons_url)
         if success:
             raw = json.loads(api_response.text)
-            engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"])
+            engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
                                 for f in raw["features"]}
         else:
             raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
@@ -312,7 +312,7 @@ class Geocoder:
             with nrs_zip.open(nrs_shp_file, "r") as shp:
                 with nrs_zip.open(nrs_dbf_file, "r") as dbf:
                     sf = shapefile.Reader(shp=shp, dbf=dbf)
-                    scots_regions = {sr.record[1]: shape(sr.shape.__geo_interface__)
+                    scots_regions = {sr.record[1]: shape(sr.shape.__geo_interface__).buffer(0)
                                      for sr in sf.shapeRecords()}
         llsoa_regions = {**engwales_regions, **scots_regions}
         llsoa_regions = {llsoacd: (llsoa_regions[llsoacd], llsoa_regions[llsoacd].bounds)
@@ -340,10 +340,10 @@ class Geocoder:
             for f in raw["features"]:
                 region_id = f["properties"]["RegionID"]
                 if region_id not in gsp_regions:
-                    gsp_regions[region_id] = shape(f["geometry"])
+                    gsp_regions[region_id] = shape(f["geometry"]).buffer(0)
                 else: # Sometimes a region is in multiple pieces due to PES boundary e.g. Axminster
                     gsp_regions[region_id] = cascaded_union([gsp_regions[region_id],
-                                                             shape(f["geometry"])])
+                                                             shape(f["geometry"]).buffer(0)])
         else:
             raise Exception("Encountered an error while extracting GSP region data from ESO API.")
         gsp_regions = {region_id: (gsp_regions[region_id], gsp_regions[region_id].bounds)
@@ -371,7 +371,7 @@ class Geocoder:
             dno_names = {}
             for f in raw["features"]:
                 region_id = f["properties"]["ID"]
-                dno_regions[region_id] = shape(f["geometry"])
+                dno_regions[region_id] = shape(f["geometry"]).buffer(0)
                 dno_names[region_id] = (f["properties"]["Name"], f["properties"]["LongName"])
         else:
             raise Exception("Encountered an error while extracting DNO License Area boundary data "
