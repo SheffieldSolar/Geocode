@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 
 import os
 import sys
@@ -296,7 +296,8 @@ class Geocoder:
                 return pickle.load(pickle_fid)
         self.myprint("Extracting the LLSOA boundary data from ONS and NRS (this only needs to be "
                      "done once)...")
-        ons_url = "https://opendata.arcgis.com/datasets/007577eeb8e34c62a1844df090a93128_0.geojson"
+        # ons_url = "https://opendata.arcgis.com/datasets/007577eeb8e34c62a1844df090a93128_0.geojson"
+        ons_url = "https://opendata.arcgis.com/datasets/f213065139e3441195803b4155e71e00_0.geojson"
         # Loading NRS data from URL abandoned due to need for re-projection
         # nrs_url = "https://www.nrscotland.gov.uk/files/geography/output-area-2011-eor.zip"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
