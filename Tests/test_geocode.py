@@ -13,7 +13,7 @@ import unittest
 
 from geocode import Geocoder
 
-class sp2tsTestCase(unittest.TestCase):
+class geocodeTestCase(unittest.TestCase):
     """Tests for `geocode.py`."""
     def setUp(self):
         with Geocoder(quiet=True) as geo:
