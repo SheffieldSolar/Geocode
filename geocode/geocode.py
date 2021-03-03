@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 import os
 import sys
@@ -306,7 +306,7 @@ class Geocoder:
         success, api_response = self.fetch_from_api(ons_url)
         if success:
             raw = json.loads(api_response.text)
-            engwales_regions = {f["properties"]["lsoa11cd"]: shape(f["geometry"]).buffer(0)
+            engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
                                 for f in raw["features"]}
         else:
             raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
