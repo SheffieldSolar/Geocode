@@ -19,7 +19,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 
 ## How do I get set up?
 
-Developed and tested with Python 3.7, should work for 3.6+.
+Developed and tested with Python 3.7, should work for 3.6, 3.7 and 3.8.  At present, the code will not install on Python 3.9 because one of this package's dependencies, `convertbng`, does not yet support Python 3.9.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
