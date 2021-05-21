@@ -84,7 +84,6 @@ setup(
         "numpy",
         "pandas",
         "googlemaps",
-        "convertbng",
         "requests",
         "shapely",
         "pyshp",
