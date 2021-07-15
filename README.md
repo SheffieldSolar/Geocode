@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.8.9*
+*Latest Version: 0.9.0*
 
 ## What is this repository for?
 
@@ -163,6 +163,15 @@ When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a
 
 ### Command Line Utilities
 
+The command line utilities listed below are available when the Geocode library has been installed with pip.
+
+Alternatively, one can run them inside the official production Docker image e.g.
+
+```
+>> 
+```
+
+
 #### latlons2llsoa
 
 This utility can be used to load a CSV file containing latitudes and longitudes and to reverse-geocode them to LLSOAs (optionally switching to Data Zones in Scotland):
@@ -274,9 +283,18 @@ geocode --clear-cache
 
 ### Running Tests
 
+You can clone this code locally and then run:
+
 ```
->> cd <root-dir>
+>> cd <repo-root-dir>
 >> python -m unittest Tests.test_geocode
+```
+
+Better yet, run them inside the official Docker image:
+
+```
+>> cd <repo-root-dir>
+>> docker run -it --rm -v <repo-root-dir>:/geocode sheffieldsolar/geocode:latest python -m unittest Tests.test_geocode
 ```
 
 ## Appendix
@@ -326,7 +344,7 @@ Any queries you make to the GMaps API will be cached to `geocode/google_maps/gma
 
 ### ONS
 
-The Geocode library makes use of data from the Office for National Statistics in order to geocode Lower Layer Super Output Areas (LLSOAs) in England and Wales. The first time you make use of the `Geocoder.geocode_llsoa()` method, the LLSOA (December 2011) Population Weighted Centroids data will be downloaded from the ONS API and cached locally in `geocode/ons_nrs/llsoa_centroids_<version>.p`. The first time you make use of the `Geocoder.reverse_geocode_llsoa()` method, the LLSOA (December 2011) Boundaries EW data will be downloaded from the ONS API and cached locally in `geocode/ons_nrs/llsoa_boundaries_<version>.p`. More information [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-population-weighted-centroids) and [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-boundaries-ew-bsc).
+The Geocode library makes use of data from the Office for National Statistics in order to geocode Lower Layer Super Output Areas (LLSOAs) in England and Wales. As of version 0.9.0, these datasets are packaged with this repository for performance. The first time you make use of the `Geocoder.geocode_llsoa()` method, the LLSOA (December 2011) Population Weighted Centroids data will be extacted and cached locally in `geocode/ons_nrs/llsoa_centroids_<version>.p`. The first time you make use of the `Geocoder.reverse_geocode_llsoa()` method, the LLSOA (December 2011) Boundaries EW data will be extracted and cached locally in `geocode/ons_nrs/llsoa_boundaries_<version>.p`. More information [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-population-weighted-centroids) and [here](https://geoportal.statistics.gov.uk/datasets/lower-layer-super-output-areas-december-2011-boundaries-ew-bsc).
 
 ### NRS
 

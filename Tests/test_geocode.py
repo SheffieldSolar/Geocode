@@ -10,6 +10,7 @@ Jamie Taylor 2020-05-22
 """
 
 import unittest
+import numpy as np
 
 from geocode import Geocoder
 
@@ -30,10 +31,15 @@ class geocodeTestCase(unittest.TestCase):
             (51.578729873335718, -0.068445270723745),
             (53.207256254835059, -3.13247635788833),
             (55.94492620443608, -4.333451009831742),
-            (55.91836588770352, -4.21934323024909)
+            (55.91836588770352, -4.21934323024909),
         ]
         with Geocoder(quiet=True) as geo:
-            self.assertAlmostEqual(geo.geocode_llsoa(llsoas), centroids)
+            # test_data = geo.geocode_llsoa(llsoas)
+            # for i, c in enumerate(centroids):
+                # self.assertAlmostEqual(test_data[i][0], c[0])
+                # self.assertAlmostEqual(test_data[i][1], c[1])
+            #self.assertAlmostEqual(geo.geocode_llsoa(llsoas), centroids)
+            np.testing.assert_almost_equal(geo.geocode_llsoa(llsoas), centroids)
 
     def test_reverse_geocode_llsoa(self):
         """
@@ -57,15 +63,15 @@ class geocodeTestCase(unittest.TestCase):
         """
         Test the `geocode_constituency()` function with several test cases.
         """
-        constituencies = ["Banbury", "Cardiff Central",
-                          "Inverclyde"]
+        constituencies = ["Banbury", "Cardiff Central", "Inverclyde"]
         latlons = [
             (51.9910766, -1.286259136),
             (51.5047741, -3.163350737),
             (55.90118449, -4.743636917),
         ]
         with Geocoder(quiet=True) as geo:
-            self.assertAlmostEqual(geo.geocode_constituency(constituencies), latlons)
+            #self.assertAlmostEqual(geo.geocode_constituency(constituencies), latlons)
+            np.testing.assert_almost_equal(geo.geocode_constituency(constituencies), latlons)
 
     # def test_reverse_geocode_gsp(self):
         # """

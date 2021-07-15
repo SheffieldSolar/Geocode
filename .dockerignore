@@ -1,0 +1,4 @@
+# Ignore generated files
+**/*.pyc
+# Ignore cache files
+**/*.p

@@ -1,0 +1,9 @@
+FROM python:3.9
+WORKDIR /geocode
+
+#RUN pip install --no-cache-dir git+https://github.com/SheffieldSolar/Geocode/@0.9.0 > /dev/null
+RUN pip install --no-cache-dir git+https://github.com/SheffieldSolar/Geocode/ > /dev/null
+
+RUN geocode --setup
+
+CMD ["geocode", "-h"]

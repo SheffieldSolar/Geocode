@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.9"
+__version__ = "0.9.0"
 
 import os
 import sys
@@ -75,6 +75,7 @@ class Geocoder:
         self.dz_lookup_cache_file = os.path.join(self.ons_dir,
                                                  f"datazone_lookup_{version_string}.p")
         self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
+        self.ons_zipfile = os.path.join(self.ons_dir, "ons.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
                                                      "constituency_centroids.psv")
@@ -248,15 +249,23 @@ class Geocoder:
                 return pickle.load(pickle_fid)
         self.myprint("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
                      "once)...")
-        ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
-        success, api_response = self.fetch_from_api(ons_url)
-        if success:
-            raw = json.loads(api_response.text)
-            engwales_lookup = {f["properties"]["lsoa11cd"]:
-                               tuple(f["geometry"]["coordinates"][::-1])
-                               for f in raw["features"]}
-        else:
-            raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        # Loading ONS data from URL abandoned due to slow download and regularly changing API URL
+        # ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
+        # success, api_response = self.fetch_from_api(ons_url)
+        # if success:
+            # raw = json.loads(api_response.text)
+            # engwales_lookup = {f["properties"]["lsoa11cd"]:
+                               # tuple(f["geometry"]["coordinates"][::-1])
+                               # for f in raw["features"]}
+        # else:
+            # raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        ons_file = "Lower_Layer_Super_Output_Areas_(December_2011)_Population_Weighted_Centroids.geojson"
+        with zipfile.ZipFile(self.ons_zipfile, "r") as ons_zip:
+            with ons_zip.open(ons_file, "r") as fid:
+                raw = json.load(fid)
+                engwales_lookup = {f["properties"]["lsoa11cd"]:
+                                   tuple(f["geometry"]["coordinates"][::-1])
+                                   for f in raw["features"]}
         codes, eastings, northings = [], [], []
         datazones, dzeastings, dznorthings = [], [], []
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
@@ -296,20 +305,25 @@ class Geocoder:
                 return pickle.load(pickle_fid)
         self.myprint("Extracting the LLSOA boundary data from ONS and NRS (this only needs to be "
                      "done once)...")
-        # ons_url = "https://opendata.arcgis.com/datasets/007577eeb8e34c62a1844df090a93128_0.geojson"
-        # ons_url = "https://opendata.arcgis.com/datasets/f213065139e3441195803b4155e71e00_0.geojson"
-        ons_url = "https://opendata.arcgis.com/datasets/e0b761d78e51491d84a3df33dff044c7_0.geojson"
+        # Loading ONS data from URL abandoned due to slow download and regularly changing API URL
+        # ons_url = "https://opendata.arcgis.com/datasets/e0b761d78e51491d84a3df33dff044c7_0.geojson"
         # Loading NRS data from URL abandoned due to need for re-projection
         # nrs_url = "https://www.nrscotland.gov.uk/files/geography/output-area-2011-eor.zip"
+        ons_file = "Lower_Layer_Super_Output_Areas__December_2011__Boundaries_Full_Extent__BFE__EW_V3.geojson"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
         nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        success, api_response = self.fetch_from_api(ons_url)
-        if success:
-            raw = json.loads(api_response.text)
-            engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
-                                for f in raw["features"]}
-        else:
-            raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        # success, api_response = self.fetch_from_api(ons_url)
+        # if success:
+            # raw = json.loads(api_response.text)
+            # engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
+                                # for f in raw["features"]}
+        # else:
+            # raise Exception("Encountered an error while extracting LLSOA data from ONS API.")
+        with zipfile.ZipFile(self.ons_zipfile, "r") as ons_zip:
+            with ons_zip.open(ons_file, "r") as geojson:
+                raw = json.load(geojson)
+                engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
+                                    for f in raw["features"]}
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
             with nrs_zip.open(nrs_shp_file, "r") as shp:
                 with nrs_zip.open(nrs_dbf_file, "r") as dbf:
