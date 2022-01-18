@@ -32,19 +32,17 @@ Check that the installation was successful by running the following command from
 This will print the helper for the limited command line interface which provides tools to help get set up and to clear the cache when needed:
 
 ```
-usage: geocode.py [-h] [--clear-cache] [--debug] [--setup]
-                  [--load-cpo-zip </path/to/zip-file>]
-                  [--load-gmaps-key <gmaps-api-key>]
+usage: geocode [-h] [--clear-cache] [--debug] [--setup]
+               [--load-cpo-zip </path/to/zip-file>] [--load-gmaps-key <gmaps-api-key>]
 
-This is a command line interface (CLI) for the Geocode module version 0.7.2.
+This is a command line interface (CLI) for the Geocode module version 0.8.10.
 
 optional arguments:
   -h, --help            show this help message and exit
   --clear-cache         Specify to delete the cache files.
   --debug               Geocode some sample postcodes/addresses/LLSOAs.
-  --setup               Force download all datasets to local cache (useful if
-                        running inside a Docker container i.e. run this as
-                        part of image build).
+  --setup               Force download all datasets to local cache (useful if running
+                        inside a Docker container i.e. run this as part of image build).
   --load-cpo-zip </path/to/zip-file>
                         Load the Code Point Open data from a local zip file.
   --load-gmaps-key <gmaps-api-key>
