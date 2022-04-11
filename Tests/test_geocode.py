@@ -16,7 +16,7 @@ from geocode import Geocoder
 class geocodeTestCase(unittest.TestCase):
     """Tests for `geocode.py`."""
     def setUp(self):
-        with Geocoder(quiet=True) as geo:
+        with Geocoder(progress_bar=False) as geo:
             geo.clear_cache(delete_gmaps_cache=True)
 
     def test_geocode_llsoa(self):
@@ -32,7 +32,7 @@ class geocodeTestCase(unittest.TestCase):
             (55.94492620443608, -4.333451009831742),
             (55.91836588770352, -4.21934323024909)
         ]
-        with Geocoder(quiet=True) as geo:
+        with Geocoder(progress_bar=False) as geo:
             self.assertAlmostEqual(geo.geocode_llsoa(llsoas), centroids)
 
     def test_reverse_geocode_llsoa(self):
@@ -49,7 +49,7 @@ class geocodeTestCase(unittest.TestCase):
             (55.94492620443608, -4.333451009831742)
         ]
         datazone_latlons = [(55.91836588770352, -4.21934323024909)]
-        with Geocoder(quiet=True) as geo:
+        with Geocoder(progress_bar=False) as geo:
             self.assertEqual(geo.reverse_geocode_llsoa(latlons), llsoas)
             self.assertEqual(geo.reverse_geocode_llsoa(datazone_latlons, datazones=True), datazones)
 
@@ -64,7 +64,7 @@ class geocodeTestCase(unittest.TestCase):
             (51.5047741, -3.163350737),
             (55.90118449, -4.743636917),
         ]
-        with Geocoder(quiet=True) as geo:
+        with Geocoder(progress_bar=False) as geo:
             self.assertAlmostEqual(geo.geocode_constituency(constituencies), latlons)
 
     # def test_reverse_geocode_gsp(self):
@@ -72,7 +72,7 @@ class geocodeTestCase(unittest.TestCase):
         # Test the `reverse_geocode_gsp` function with several test cases.
         # """
         
-        # with Geocoder(quiet=True) as geo:
+        # with Geocoder(progress_bar=False) as geo:
             # assertAlmostEqual(geo.geocode_constituency(constituencies), latlons)
 
 if __name__ == "__main__":
