@@ -5,6 +5,7 @@ A lightweight geocoder that uses OS Code Point Open where possible for postcodes
 everything else.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2019-10-08
 """
 
@@ -14,6 +15,7 @@ import os
 import sys
 import pickle
 import time as TIME
+from typing import List, Union, Tuple
 import argparse
 import zipfile
 from shutil import copyfile
@@ -40,8 +42,25 @@ except ImportError:
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class Geocoder:
-    """Geocode addresses and postcodes or revers-geocode latitudes and longitudes."""
-    def __init__(self, quiet=False, progress_bar=False, prefix=""):
+    """
+    Geocode addresses and postcodes or revers-geocode latitudes and longitudes.
+    
+    Parameters
+    ----------
+    
+    `quiet` : boolean
+        Optionally stop printing updates during the running of certain functions.
+        Defaults to False.
+    `progress_bar` : boolean
+        Optionally print a progress bar to display the progress during more complex functions.
+        Defaults to False.
+    `prefix` : string
+        Optionally add a string to the custom print function and progress bar.
+    """
+    def __init__(self,
+                 quiet: bool = False,
+                 progress_bar: bool = False,
+                 prefix: str = ""):
         self.quiet = quiet
         self.prefix = prefix
         version_string = __version__.replace(".", "-")
@@ -116,8 +135,16 @@ class Geocoder:
         self.flush_gmaps_cache()
         self.flush_cache()
 
-    def clear_cache(self, delete_gmaps_cache=None, old_versions_only=False):
-        """Clear any cache files from the installation directory including from old versions."""
+    def clear_cache(self, delete_gmaps_cache: str = None, old_versions_only: bool = False):
+        """
+        Clear any cache files from the installation directory including from old versions.
+
+        Parameters
+        ----------
+        delete_gmaps_cache : string
+            Optional string dictating whether or not to clear the Google Maps data in cache.
+            Defaults to None.
+        """
         cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p"))
         for cache_file in cache_files:
             os.remove(cache_file)
@@ -151,7 +178,14 @@ class Geocoder:
         self.load_dno_boundaries()
 
     def load_gmaps_key(self):
-        """Load the user's GMaps API key from installation directory."""
+        """
+        Load the user's GMaps API key from installation directory.
+
+        Returns
+        -------
+        string
+            String of the user's Google Maps API key.
+        """
         try:
             with open(self.gmaps_key_file) as fid:
                 key = fid.read().strip()
@@ -189,8 +223,22 @@ class Geocoder:
             with open(self.cache_file, "wb") as pickle_fid:
                 pickle.dump(self.cache, pickle_fid)
 
-    def load_code_point_open(self, force_reload=False):
-        """Load the OS Code Point Open Database, either from raw zip file or local cache."""
+    def load_code_point_open(self, force_reload: bool = False):
+        """
+        Load the OS Code Point Open Database, either from raw zip file or local cache.
+
+        Parameters
+        ----------
+        `force_reload` : boolean
+            Option to re-extract the Code Point Open data.
+
+        Returns
+        -------
+
+        Pandas DataFrame
+            Contains the columns Postcode, Positional_quality_indicator, Eastings, Northings,
+            longitude, latitude, outward_postcode, inward_postcode.
+        """
         if os.path.isfile(self.cpo_cache_file) and not force_reload:
             with open(self.cpo_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
@@ -227,7 +275,20 @@ class Geocoder:
         return cpo
 
     def fetch_from_api(self, url):
-        """Generic function to GET data from web API with retries."""
+        """
+        Generic function to GET data from web API with retries.
+
+        Parameters
+        ----------
+        `url` : string
+            A string detailing the url to an arbitray web API endpoint.
+        
+        Returns
+        -------
+        tuple
+            Tuple containing the status code (0: unsuccessful, 1: successful) and the API response 
+            or lack there of.
+        """
         retries = 0
         while retries < 3:
             try:
@@ -242,7 +303,16 @@ class Geocoder:
         return 0, None
 
     def load_llsoa_lookup(self):
-        """Load the lookup of LLSOA -> Population Weighted Centroid."""
+        """
+        Load the lookup of LLSOA -> Population Weighted Centroid.
+        
+        Returns
+        -------
+
+        dict
+            A dictionary containing the llsoa zones for Scotland, England and Wales as the keys 
+            and the corresponding latitude and longitude in tuple form as the values.
+        """
         if os.path.isfile(self.llsoa_cache_file):
             with open(self.llsoa_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
@@ -290,6 +360,13 @@ class Geocoder:
         """
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
         (England and Wales) and packaged data (Scotland).
+
+        Returns
+        -------
+        dict
+            A dictionary whereby the keys are the LLSOA codes and the values are tuples where the
+            first value is Shapely polygon of the region and the second value are the bounding box
+            coords of the region.
         """
         if os.path.isfile(self.llsoa_boundaries_cache_file):
             with open(self.llsoa_boundaries_cache_file, "rb") as pickle_fid:
@@ -328,6 +405,13 @@ class Geocoder:
         """
         Load the GSP / GNode boundaries, either from local cache if available, else fetch from ESO
         Data Portal API.
+
+        Returns
+        -------
+        dict
+            A dictionary whereby the keys are the GSP region IDs and the values are tuples where the
+            first value is Shapely polygon of the region and the second value are the bounding box
+            coords of the region.
         """
         if os.path.isfile(self.gsp_boundaries_cache_file):
             with open(self.gsp_boundaries_cache_file, "rb") as pickle_fid:
@@ -353,12 +437,19 @@ class Geocoder:
         with open(self.gsp_boundaries_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_regions, pickle_fid)
         self.myprint(f"    -> Extracted and pickled to '{self.gsp_boundaries_cache_file}'")
+        import pdb; pdb.set_trace()
         return gsp_regions
 
     def load_dno_boundaries(self):
         """
         Load the DNO License Area boundaries, either from local cache if available, else fetch from
         ESO Data Portal API.
+
+        Returns
+        -------
+        tuple
+            A tuple with the first value being a dict containing the DNO region boundaries and the
+            second being a dict containing the metadata i.e. names of the DNO regions.
         """
         if os.path.isfile(self.dno_boundaries_cache_file):
             with open(self.dno_boundaries_cache_file, "rb") as pickle_fid:
@@ -404,7 +495,16 @@ class Geocoder:
         return self.dno_regions
 
     def load_gsp_lookup(self):
-        """Load the lookup of Region <-> GSP <-> GNode."""
+        """
+        Load the lookup of Region <-> GSP <-> GNode.
+
+        Returns
+        -------
+        Pandas DataFrame
+            A DataFrame with the columns ng_id, ggd_id, gnode_id, gnode_name, gnode_lat,  gnode_lon,
+            gsp_id, gsp_name, gsp_lat, gsp_lon, dc_id, dc_name, dc_lat, dc_lon, region_id, 
+            region_name, has_pv, pes_id, pes_name.
+        """
         if os.path.isfile(self.gsp_lookup_cache_file):
             with open(self.gsp_lookup_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
@@ -424,7 +524,15 @@ class Geocoder:
         return gsp_lookup
 
     def load_datazone_lookup(self):
-        """Load a lookup of Scottish LLSOA <-> Datazone."""
+        """
+        Load a lookup of Scottish LLSOA <-> Datazone.
+
+        Returns
+        -------
+        dict
+            A dictionary whereby the keys are the Scottish LLSOA codes and the values are the
+            corresponding Datazones.
+        """
         if os.path.isfile(self.dz_lookup_cache_file):
             with open(self.dz_lookup_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
@@ -439,7 +547,15 @@ class Geocoder:
         return dz_lookup
 
     def load_constituency_lookup(self):
-        """Load a lookup of UK constituency -> Geospatial Centroid."""
+        """
+        Load a lookup of UK constituency -> Geospatial Centroid.
+
+        Returns
+        -------
+        dict
+            A dictionary where the keys are the different constituencies of the UK and the values
+            are the centroid latitude and longitudes of the area.
+        """
         if os.path.isfile(self.constituency_cache_file):
             with open(self.constituency_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
