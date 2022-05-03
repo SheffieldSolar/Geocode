@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.8.10"
+__version__ = "0.8.11"
 
 import os
 import sys
@@ -22,6 +22,7 @@ import json
 import csv
 import glob
 import warnings
+import logging
 import requests
 from numpy import isnan
 import pandas as pd
@@ -883,7 +884,7 @@ class Geocoder:
         if not self.quiet:
             if time_section == "stop":
                 msg += " ({:.1f} seconds)".format(TIME.time() - self.timer)
-            print(self.prefix + "[Geocode] " + msg)
+            logging.info(self.prefix + "[Geocode] " + msg)
             if time_section == "start":
                 self.timer = TIME.time()
 
@@ -987,9 +988,9 @@ def debug():
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode_llsoa(sample_llsoas)
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.debug("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for llsoa, (lat, lon) in zip(sample_llsoas, results):
-        print(f"[Geocode] {llsoa} :    {lat}, {lon}")
+        logging.debug(f"[Geocode] {llsoa} :    {lat}, {lon}")
     sample_latlons = [
         (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
         (50.409, -4.672), (52.940, -1.146), (57.060, -2.874), (56.31, -4.)
@@ -997,9 +998,9 @@ def debug():
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.reverse_geocode_llsoa(sample_latlons, datazones=True)
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.debug("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for (lat, lon), llsoa in zip(sample_latlons, results):
-        print(f"[Geocode] {lat}, {lon} :    {llsoa}")
+        logging.debug(f"[Geocode] {lat}, {lon} :    {llsoa}")
     sample_file = os.path.join(SCRIPT_DIR, "sample_latlons.txt")
     with open(sample_file) as fid:
         sample_latlons = [tuple(map(float, line.strip().split(",")))
@@ -1007,28 +1008,28 @@ def debug():
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results, results_more = geocoder.reverse_geocode_gsp(sample_latlons)
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.debug("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for (lat, lon), region_id, extra in zip(sample_latlons, results, results_more):
-        print(f"[Geocode] {lat}, {lon} :    {region_id}")
-        print(f"[Geocode]         {extra}")
+        logging.debug(f"[Geocode] {lat}, {lon} :    {region_id}")
+        logging.debug(f"[Geocode]         {extra}")
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode_constituency(sample_constituencies)
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.debug("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
-        print(f"[Geocode] {constituency} :    {lat}, {lon}")
+        logging.debug(f"[Geocode] {constituency} :    {lat}, {lon}")
     sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
     with open(sample_file) as fid:
         postcodes = [line.strip() for line in fid if line.strip()][:10]
     timerstart = TIME.time()
     with Geocoder(progress_bar=True) as geocoder:
         results = geocoder.geocode(postcodes=postcodes)
-    print("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.debug("[Geocode] Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for postcode, (lat, lon, status) in zip(postcodes, results):
-        print(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
+        logging.debug(f"[Geocode] {postcode} :    {lat}, {lon}    ->  "
               f"{geocoder.status_codes[status]}")
 
 def main():
@@ -1042,12 +1043,12 @@ def main():
             copyfile(options.cpo_zip, geocoder.cpo_zipfile)
             geocoder.load_code_point_open(force_reload=True)
     if options.gmaps_key is not None:
-        print("[Geocode] Loading GMaps key...")
+        logging.info("[Geocode] Loading GMaps key...")
         with Geocoder() as geocoder:
             with open(geocoder.gmaps_key_file, "w") as fid:
                 fid.write(options.gmaps_key)
             if geocoder.load_gmaps_key() == options.gmaps_key:
-                print(f"[Geocode]     -> GMaps key saved to '{geocoder.gmaps_key_file}'")
+                logging.info(f"[Geocode]     -> GMaps key saved to '{geocoder.gmaps_key_file}'")
     if options.setup:
         with Geocoder() as geocoder:
             geocoder.force_setup()
