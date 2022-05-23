@@ -1,0 +1,11 @@
+geocode package
+===============
+
+
+Module contents
+---------------
+
+.. automodule:: geocode
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modules &mdash; Geocode 0.9.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Geocode’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Geocode
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Welcome to Geocode’s documentation!</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#geocode">geocode</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Geocode</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Modules</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="modules">
+<h1><a class="toc-backref" href="#id1">Modules</a><a class="headerlink" href="#modules" title="Permalink to this headline"></a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#modules" id="id1">Modules</a></p>
+<ul>
+<li><p><a class="reference internal" href="#geocode" id="id2">geocode</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<section id="geocode">
+<h2><a class="toc-backref" href="#id2">geocode</a><a class="headerlink" href="#geocode" title="Permalink to this headline"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="geocode.Geocoder">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">geocode.</span></span><span class="sig-name descname"><span class="pre">Geocoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">progress_bar</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gmaps_key_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/geocode.html#Geocoder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
+longitudes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.clear_cache">
+<span class="sig-name descname"><span class="pre">clear_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delete_gmaps_cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_versions_only</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.clear_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.clear_cache" title="Permalink to this definition"></a></dt>
+<dd><p>Clear any cache files from the installation directory including from old versions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>delete_gmaps_cache</strong> (<em>boolean</em>) – Optional boolean deciding whether or not to clear the Google Maps data in cache.
+Defaults to None, resulting in stdout/stdin prompts.</p></li>
+<li><p><strong>old_versions_only</strong> (<em>boolean</em>) – Optional boolean deciding whether or not to clear all cache files or just those
+corresponding to previous versions of the Geocode library. Defaults to False.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.cpo_geocode">
+<span class="sig-name descname"><span class="pre">cpo_geocode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pcs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.core.frame.DataFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.frame.DataFrame</span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.cpo_geocode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.cpo_geocode" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode multiple postcodes using Code Point Open.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pcs</strong> (<em>Pandas.DataFrame</em>) – A Pandas DataFrame containing the postcodes (or partial postcodes) to geocode. Must
+contain the column ‘input_postcode’.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A Pandas DataFrame with columns: input_postcode (str), latitude (float), longitude
+(float), match_status (int). The <cite>match_status</cite> shows the quality of the postcode lookup
+- use the class attribute <em>self.status_codes</em> (a dict) to get a string representation.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.cpo_geocode_one">
+<span class="sig-name descname"><span class="pre">cpo_geocode_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">postcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.series.Series</span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.cpo_geocode_one"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.cpo_geocode_one" title="Permalink to this definition"></a></dt>
+<dd><p>Use the OS Code Point Open Database to geocode a postcode (or partial postcode using as much
+accuracy as the partial code permits).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>postcode</strong> (<em>string</em>) – The postcode (or partial postcode) to geocode.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A Pandas Series with fields: input_postcode (str), latitude (float), longitude (float),
+match_status (int). The status code shows the quality of the postcode lookup - use the
+class attribute <em>self.status_codes</em> (a dict) to get a string representation.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Pandas.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.force_setup">
+<span class="sig-name descname"><span class="pre">force_setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/geocode.html#Geocoder.force_setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.force_setup" title="Permalink to this definition"></a></dt>
+<dd><p>Download all data and setup caches.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.geocode">
+<span class="sig-name descname"><span class="pre">geocode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">postcodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addresses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.geocode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.geocode" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode several postcodes and/or addresses.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>postcodes</strong> (<em>iterable of strings</em>) – The postcodes (or partial postcodes) to geocode. Must align with <em>addresses</em> if both are
+passed.</p></li>
+<li><p><strong>addresses</strong> (<em>iterable of strings</em>) – The addresses to geocode. Must align with <em>postcodes</em> if both are passed. If addresses
+are passed, the GMaps API will be used since OS Code Point Open does not provide address
+lookup.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The output list will align with the input postcodes/addresses, with each element being a
+tuple containing: latitude (float), longitude (float), status code (int). The status
+code shows the quality of the postcode lookup - use the class attribute
+<em>self.status_codes</em> (a dict) to get a string representation.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of tuples</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The input iterables can be any Python object which can be interpreted by Pandas.DataFrame()
+e.g. a list, tuple, Numpy array etc.
+If you pass only postcodes, this method will priotiise OS Code Point Open as the geocoder.
+If a postcode fails to geocode using OS CPO, it will be geocoded with GMaps.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.geocode_constituency">
+<span class="sig-name descname"><span class="pre">geocode_constituency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constituency</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.geocode_constituency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.geocode_constituency" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode a UK Constituency using the geospatial centroid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>constituency</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The constituency names to geocode.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>If a single constituency name was passed (i.e. a string), the output be a tuple
+containing: latitude (float), longitude (float). If several constituency names are
+passed (i.e. an iterable of strings), the output will be a list of tuples which aligns
+with the input iterable.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple or list of tuples</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The input <em>constituency</em> iterable can be any Python object which can be looped over with a
+for loop e.g. a list, tuple, Numpy array etc.
+Constituencies are identified by their full name, case-insensitive, ignoring spaces.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.geocode_llsoa">
+<span class="sig-name descname"><span class="pre">geocode_llsoa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">llsoa</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.geocode_llsoa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.geocode_llsoa" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode an LLSOA using the Population Weighted Centroid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>llsoa</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The LLSOA(s) to geocode.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>If a single LLSOA was passed (i.e. a string), the output be a tuple containing: latitude
+(float), longitude (float). If several LLSOAs are passed (i.e. an iterable of strings),
+the output will be a list of tuples which aligns with the input iterable.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Tuple or List of Tuples</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The input <em>llsoa</em> iterable can be any Python object which can be looped over with a for loop
+e.g. a list, tuple, Numpy array etc.
+LLSOAs are identified by their LLSOA Code, sometimes abbreviated to <cite>llsoacd</cite>.
+In Scotland, one can use either LLSOA codes or Datazones, this method supports both.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.geocode_one">
+<span class="sig-name descname"><span class="pre">geocode_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">postcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.geocode_one"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.geocode_one" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode a single postcode and/or address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>postcode</strong> (<em>string</em>) – The postcode (or partial postcode) to geocode.</p></li>
+<li><p><strong>address</strong> (<em>string</em>) – The address to geocode. If address is passed, the GMaps API will be used since OS Code
+Point Open does not provide address lookup.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A tuple containing: latitude (float), longitude (float), status code (int). The status
+code shows the quality of the postcode lookup - use the class attribute
+<em>self.status_codes</em> (a dict) to get a string representation.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>If you pass only postcode, this method will priotiise OS Code Point Open as the geocoder.
+If a postcode fails to geocode using OS CPO, it will be geocoded with GMaps.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.get_dno_regions">
+<span class="sig-name descname"><span class="pre">get_dno_regions</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/geocode.html#Geocoder.get_dno_regions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.get_dno_regions" title="Permalink to this definition"></a></dt>
+<dd><p>Get the DNO License Area Boundaries from the ESO Data Portal.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p><strong>`dno_regions`</strong> (<em>dict</em>) – Dict whose keys are the region IDs and whose values are a tuple containing:
+(region_boundary, region_bounds). The region boundary is a Shapely
+Polygon/MultiPolygon and the bounds are a tuple containing (xmin, ymin, xmax, ymax).</p></li>
+<li><p><strong>`dno_names`</strong> (<em>dict</em>) – Dict whose keys are the region IDs and whose values are a tuple containing:
+(Name, LongName).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.gmaps_geocode_one">
+<span class="sig-name descname"><span class="pre">gmaps_geocode_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">postcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.core.series.Series</span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.gmaps_geocode_one"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.gmaps_geocode_one" title="Permalink to this definition"></a></dt>
+<dd><p>Use the GMaps API to geocode a postcode (or partial postcode) and/or an address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>postcode</strong> (<em>string</em>) – The postcode (or partial postcode) to geocode.</p></li>
+<li><p><strong>address</strong> (<em>string</em>) – The address to geocode.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A Pandas Series with fields: input_postcode (str), latitude (float), longitude (float),
+match_status (int). The status code shows the quality of the postcode lookup - use the
+class attribute <em>self.status_codes</em> (a dict) to get a string representation.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Pandas.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.reverse_geocode_gsp">
+<span class="sig-name descname"><span class="pre">reverse_geocode_gsp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latlons</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.reverse_geocode_gsp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.reverse_geocode_gsp" title="Permalink to this definition"></a></dt>
+<dd><p>Reverse-geocode latitudes and longitudes to GSP.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>latlons</strong> (<em>list of tuples</em>) – A list of tuples containing (latitude, longitude).</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>`results`</strong> (<em>list of ints</em>) – A list of region IDs, aligned with the input <em>latlons</em>.</p></li>
+<li><p><strong>`results_more`</strong> (<em>list of lists of dicts</em>) – The full MANY:MANY lookup giving the Region &lt;-&gt; GSP &lt;-&gt; GNode which the lat/lon falls
+within. The relationship between GSP: GNode is MANY:MANY, so each element of the outer
+list is another list of matches, each element of which is a dictionary giving the
+matched GSP / GNode.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Return format needs some work, maybe switch to DataFrames in future release.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.reverse_geocode_llsoa">
+<span class="sig-name descname"><span class="pre">reverse_geocode_llsoa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latlons</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datazones</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.reverse_geocode_llsoa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.reverse_geocode_llsoa" title="Permalink to this definition"></a></dt>
+<dd><p>Reverse-geocode latitudes and longitudes to LLSOA.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>latlons</strong> (<em>list of tuples</em>) – A list of tuples containing (latitude, longitude).</p></li>
+<li><p><strong>datazones</strong> (<em>bool</em>) – Set this to True to return Datazones rather than LLSOA codes in Scotland (default is
+False).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The LLSOA codes that the input latitudes and longitudes fall within. Any lat/lons which
+do not fall inside an LLSOA boundary will return None.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of strings</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Geocode’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Jamie Taylor.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
