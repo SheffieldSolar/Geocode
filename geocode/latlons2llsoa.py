@@ -49,7 +49,7 @@ def main():
         df["llsoacd"] = geo.reverse_geocode_llsoa(df[["latitude", "longitude"]].to_numpy(),
                                                   options.datazones)
     df.to_csv(options.outfile, index=False)
-    print(f"Finished, time taken: {TIME.time() - timerstart} seconds")
+    print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")
 
 if __name__ == "__main__":
     main()

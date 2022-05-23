@@ -1,3 +1,6 @@
+import os
+import logging
+
 from geocode import Geocoder
 
 def main():
@@ -40,4 +43,8 @@ def main():
             print(f"    {lat:.3f}, {lon:.3f}")
 
 if __name__ == "__main__":
+    log_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
+    fmt = os.environ.get("GEOCODE_LOGGING_FMT", log_fmt)
+    datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
+    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "DEBUG"))
     main()

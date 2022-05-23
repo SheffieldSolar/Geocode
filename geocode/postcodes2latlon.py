@@ -41,9 +41,8 @@ def main():
     timerstart = TIME.time()
     options = parse_options()
     with open(options.infile, "r") as fid:
-        df = pd.read_csv(fid)
+        df = pd.read_csv(fid).iloc[:100]
     with Geocoder(progress_bar=True) as geo:
-        # import pdb; pdb.set_trace()
         results = geo.geocode(postcodes=df["postcode"].to_numpy())
         lats = [r[0] if r[0] is not None else pd.NA for r in results]
         lons = [r[1] if r[1] is not None else pd.NA for r in results]
@@ -52,7 +51,7 @@ def main():
     df["longitude"] = lons
     df["geocode_status"] = status
     df.to_csv(options.outfile, index=False)
-    print(f"Finished, time taken: {TIME.time() - timerstart} seconds")
+    print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")
 
 if __name__ == "__main__":
     main()

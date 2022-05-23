@@ -43,11 +43,11 @@ def main():
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
     with Geocoder(progress_bar=True) as geo:
-        lons, lats = geo.bng2latlon(df["eastings"].to_numpy(), df["northings"].to_numpy())
+        lons, lats = geo._bng2latlon(df["eastings"].to_numpy(), df["northings"].to_numpy())
     df["latitude"] = lats
     df["longitude"] = lons
     df.to_csv(options.outfile, index=False)
-    print(f"Finished, time taken: {TIME.time() - timerstart} seconds")
+    print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")
 
 if __name__ == "__main__":
     main()

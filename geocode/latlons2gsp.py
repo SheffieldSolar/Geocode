@@ -55,7 +55,7 @@ def main():
     columns = row.index.to_list() + list(l.keys())
     output = pd.DataFrame(output, columns=columns)
     output.to_csv(options.outfile, index=False)
-    print(f"Finished, time taken: {TIME.time() - timerstart} seconds")
+    print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")
 
 if __name__ == "__main__":
     main()

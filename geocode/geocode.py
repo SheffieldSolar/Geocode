@@ -5,13 +5,15 @@ A lightweight geocoder that uses OS Code Point Open where possible for postcodes
 everything else.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 
 import os
 import sys
+from typing import Optional, Iterable, Tuple, Union, List, Dict
 import logging
 import pickle
 import time as TIME
@@ -23,14 +25,14 @@ import json
 import csv
 import glob
 import requests
-from numpy import isnan
+import numpy as np
 import pandas as pd
 import googlemaps
 import pyproj
 import shapefile
 try:
     from shapely.geometry import shape, Point
-    from shapely.ops import cascaded_union
+    from shapely.ops import unary_union
     SHAPELY_AVAILABLE = True
 except ImportError:
     logging.warning("Failed to import Shapely library - you will not be able to reverse-geocode! "
@@ -51,9 +53,28 @@ class GenericException(Exception):
         return self.msg
 
 class Geocoder:
-    """Geocode addresses and postcodes or revers-geocode latitudes and longitudes."""
-    def __init__(self, progress_bar=False, prefix="", gmaps_key_file=None):
-        self.prefix = prefix
+    """
+    Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
+    longitudes.
+    """
+    def __init__(self,
+                 progress_bar: bool = False,
+                 prefix: Optional[str] = None,
+                 gmaps_key_file: Optional[str] = None) -> None:
+        """
+        Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
+        longitudes.
+
+        Parameters
+        ----------
+        `progress_bar` : boolean
+            Optionally print a progress bar to stdout during iterations. Defaults to False.
+        `prefix` : string
+            Optionally add a prefix string to the progress bar.
+        `gmaps_key_file` : string
+            Path to an API key file for Google Maps Geocode API.
+        """
+        self.prefix = prefix if prefix is not None else ""
         version_string = __version__.replace(".", "-")
         self.gmaps_dir = os.path.join(SCRIPT_DIR, "google_maps")
         self.gmaps_cache_file = os.path.join(self.gmaps_dir, "gmaps_cache.p")
@@ -92,7 +113,6 @@ class Geocoder:
                                                     f"constituency_centroids_{version_string}.p")
         self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
                                   else os.path.join(self.gmaps_dir, "key.txt")
-        self.gmaps_cache = None
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.gsp_regions = None
@@ -109,7 +129,7 @@ class Geocoder:
         self.progress_bar = progress_bar
         self.cache_file = os.path.join(self.cache_dir, f"cache_{version_string}.p")
         self.clear_cache(delete_gmaps_cache=False, old_versions_only=True)
-        self.cache = self.load_cache()
+        self.cache = self._load_cache()
         self.status_codes = {
             0: "Failed",
             1: "Full match with Code Point Open",
@@ -124,21 +144,35 @@ class Geocoder:
 
     def __exit__(self, *args):
         """Context manager - flush GMaps cache on exit."""
-        self.flush_gmaps_cache()
-        self.flush_cache()
+        self._flush_gmaps_cache()
+        self._flush_cache()
 
-    def clear_cache(self, delete_gmaps_cache=None, old_versions_only=False):
-        """Clear any cache files from the installation directory including from old versions."""
-        cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p"))
-        for cache_file in cache_files:
-            os.remove(cache_file)
+    def clear_cache(self,
+                    delete_gmaps_cache: Optional[bool] = None,
+                    old_versions_only: bool = False) -> None:
+        """
+        Clear any cache files from the installation directory including from old versions.
+
+        Parameters
+        ----------
+        delete_gmaps_cache : boolean
+            Optional boolean deciding whether or not to clear the Google Maps data in cache.
+            Defaults to None, resulting in stdout/stdin prompts.
+        old_versions_only : boolean
+            Optional boolean deciding whether or not to clear all cache files or just those
+            corresponding to previous versions of the Geocode library. Defaults to False.
+        """
+        logging.debug("Deleting cache files (delete_gmaps_cache=%s, old_versions_only=%s)",
+                      delete_gmaps_cache, old_versions_only)
         if delete_gmaps_cache is None:
             delete_gmaps_cache = query_yes_no("Do you want to delete the GMaps cache?", "no")
         if delete_gmaps_cache:
             gmaps_cache_files = glob.glob(os.path.join(self.gmaps_dir, "gmaps_cache.p"))
             for gmaps_cache_file in gmaps_cache_files:
                 os.remove(gmaps_cache_file)
-        cache_files = glob.glob(os.path.join(self.cpo_dir, "code_point_open_*.p")) + \
+                logging.debug("Deleted '%s'", gmaps_cache_file)
+        cache_files = glob.glob(os.path.join(self.cache_dir, "cache_*.p")) + \
+                      glob.glob(os.path.join(self.cpo_dir, "code_point_open_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "llsoa_centroids_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "llsoa_boundaries_*.p")) + \
                       glob.glob(os.path.join(self.eso_dir, "gsp_boundaries_*.p")) + \
@@ -150,18 +184,21 @@ class Geocoder:
             if old_versions_only and __version__.replace(".", "-") in cache_file:
                 continue
             os.remove(cache_file)
+            import pdb; pdb.set_trace()
+            logging.debug("Deleted '%s'", cache_file)
 
     def force_setup(self):
-        self.load_code_point_open(force_reload=False)
-        self.load_llsoa_lookup()
-        self.load_llsoa_boundaries()
-        self.load_gsp_boundaries()
-        self.load_gsp_lookup()
-        self.load_datazone_lookup()
-        self.load_constituency_lookup()
-        self.load_dno_boundaries()
+        """Download all data and setup caches."""
+        self._load_code_point_open(force_reload=False)
+        self._load_llsoa_lookup()
+        self._load_llsoa_boundaries()
+        self._load_gsp_boundaries()
+        self._load_gsp_lookup()
+        self._load_datazone_lookup()
+        self._load_constituency_lookup()
+        self._load_dno_boundaries()
 
-    def load_gmaps_key(self):
+    def _load_gmaps_key(self):
         """Load the user's GMaps API key from installation directory."""
         try:
             with open(self.gmaps_key_file) as fid:
@@ -172,7 +209,7 @@ class Geocoder:
             return None
         return key
 
-    def load_gmaps_cache(self):
+    def _load_gmaps_cache(self):
         """Load the cache of prior GMaps queries to avoid repeated API queries."""
         if os.path.isfile(self.gmaps_cache_file):
             with open(self.gmaps_cache_file, "rb") as pickle_fid:
@@ -180,29 +217,31 @@ class Geocoder:
         else:
             return {}
 
-    def load_cache(self):
+    def _load_cache(self):
         """Load the cache of prior addresses/postcodes for better performance."""
         if os.path.isfile(self.cache_file):
             with open(self.cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         else:
-            return {}
+            return pd.DataFrame({"input_postcode": [], "input_address": [], "latitude": [],
+                                 "longitude": [], "match_status": []})
 
-    def flush_gmaps_cache(self):
+    def _flush_gmaps_cache(self):
         """Flush any new GMaps API queries to the GMaps cache."""
         if self.gmaps_cache is not None:
             with open(self.gmaps_cache_file, "wb") as pickle_fid:
                 pickle.dump(self.gmaps_cache, pickle_fid)
 
-    def flush_cache(self):
+    def _flush_cache(self):
         """Flush any new address/postcode queries to the query cache."""
         if self.cache is not None:
             with open(self.cache_file, "wb") as pickle_fid:
                 pickle.dump(self.cache, pickle_fid)
 
-    def load_code_point_open(self, force_reload=False):
+    def _load_code_point_open(self, force_reload=False):
         """Load the OS Code Point Open Database, either from raw zip file or local cache."""
         if os.path.isfile(self.cpo_cache_file) and not force_reload:
+            logging.debug("Loading Code Point Open data from cache ('%s')", self.cpo_cache_file)
             with open(self.cpo_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the Code Point Open data (this only needs to be done once)")
@@ -227,18 +266,18 @@ class Geocoder:
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
-        lons, lats = self.bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
-                                     cpo.loc[nn_indices, ("Northings")].to_numpy())
+        lons, lats = self._bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
+                                      cpo.loc[nn_indices, ("Northings")].to_numpy())
         cpo.loc[nn_indices, "longitude"] = lons
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()
         cpo["inward_postcode"] = cpo["Postcode"].str.slice(-3).str.strip()
         with open(self.cpo_cache_file, "wb") as pickle_fid:
             pickle.dump(cpo, pickle_fid)
-        logging.info(f"Code Point Open extracted and pickled to '{self.cpo_cache_file}'")
+        logging.info("Code Point Open extracted and pickled to '%s'", self.cpo_cache_file)
         return cpo
 
-    def fetch_from_api(self, url):
+    def _fetch_from_api(self, url):
         """Generic function to GET data from web API with retries."""
         retries = 0
         while retries < 3:
@@ -253,15 +292,16 @@ class Geocoder:
                 retries += 1
         return 0, None
 
-    def load_llsoa_lookup(self):
+    def _load_llsoa_lookup(self):
         """Load the lookup of LLSOA -> Population Weighted Centroid."""
         if os.path.isfile(self.llsoa_cache_file):
+            logging.debug("Loading LLSOA lookup from cache ('%s')", self.llsoa_cache_file)
             with open(self.llsoa_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
                      "once)")
         ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
-        success, api_response = self.fetch_from_api(ons_url)
+        success, api_response = self._fetch_from_api(ons_url)
         if success:
             raw = json.loads(api_response.text)
             engwales_lookup = {f["properties"]["lsoa11cd"]:
@@ -288,22 +328,24 @@ class Geocoder:
                     datazones.append(datazone)
                     dzeastings.append(float(dzeast.strip("\"")))
                     dznorthings.append(float(dznorth.strip("\"")))
-        lons, lats = self.bng2latlon(eastings, northings)
-        dzlons, dzlats = self.bng2latlon(dzeastings, dznorthings)
+        lons, lats = self._bng2latlon(eastings, northings)
+        dzlons, dzlats = self._bng2latlon(dzeastings, dznorthings)
         scots_lookup = {code: (lat, lon) for code, lon, lat in zip(codes, lons, lats)}
         scots_dz_lookup = {dz: (lat, lon) for dz, lon, lat in zip(datazones, dzlons, dzlats)}
         llsoa_lookup = {**engwales_lookup, **scots_lookup, **scots_dz_lookup}
         with open(self.llsoa_cache_file, "wb") as pickle_fid:
             pickle.dump(llsoa_lookup, pickle_fid)
-        logging.info(f"LSOA centroids extracted and pickled to '{self.llsoa_cache_file}'")
+        logging.info("LSOA centroids extracted and pickled to '%s'", self.llsoa_cache_file)
         return llsoa_lookup
 
-    def load_llsoa_boundaries(self):
+    def _load_llsoa_boundaries(self):
         """
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
         (England and Wales) and packaged data (Scotland).
         """
         if os.path.isfile(self.llsoa_boundaries_cache_file):
+            logging.debug("Loading LLSOA boundaries from cache ('%s')",
+                          self.llsoa_boundaries_cache_file)
             with open(self.llsoa_boundaries_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the LLSOA boundary data from ONS and NRS (this only needs to be "
@@ -315,7 +357,7 @@ class Geocoder:
         # nrs_url = "https://www.nrscotland.gov.uk/files/geography/output-area-2011-eor.zip"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
         nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        success, api_response = self.fetch_from_api(ons_url)
+        success, api_response = self._fetch_from_api(ons_url)
         if success:
             raw = json.loads(api_response.text)
             engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
@@ -333,22 +375,24 @@ class Geocoder:
                          for llsoacd in llsoa_regions}
         with open(self.llsoa_boundaries_cache_file, "wb") as pickle_fid:
             pickle.dump(llsoa_regions, pickle_fid)
-        logging.info("LSOA boundaries extracted and pickled to "
-                     f"'{self.llsoa_boundaries_cache_file}'")
+        logging.info("LSOA boundaries extracted and pickled to '%s'",
+                     self.llsoa_boundaries_cache_file)
         return llsoa_regions
 
-    def load_gsp_boundaries(self):
+    def _load_gsp_boundaries(self):
         """
         Load the GSP / GNode boundaries, either from local cache if available, else fetch from ESO
         Data Portal API.
         """
         if os.path.isfile(self.gsp_boundaries_cache_file):
+            logging.debug("Loading GSP boundaries from cache ('%s')",
+                          self.gsp_boundaries_cache_file)
             with open(self.gsp_boundaries_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the GSP boundary data from NGESO's Data Portal API (this only "
                      "needs to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/a3ed5711-407a-42a9-a63a-011615eea7e0/download/gsp_regions_20181031.geojson"
-        success, api_response = self.fetch_from_api(eso_url)
+        success, api_response = self._fetch_from_api(eso_url)
         if success:
             raw = json.loads(api_response.text)
             gsp_regions = {}
@@ -357,8 +401,8 @@ class Geocoder:
                 if region_id not in gsp_regions:
                     gsp_regions[region_id] = shape(f["geometry"]).buffer(0)
                 else: # Sometimes a region is in multiple pieces due to PES boundary e.g. Axminster
-                    gsp_regions[region_id] = cascaded_union([gsp_regions[region_id],
-                                                             shape(f["geometry"]).buffer(0)])
+                    gsp_regions[region_id] = unary_union([gsp_regions[region_id],
+                                                          shape(f["geometry"]).buffer(0)])
         else:
             raise GenericException("Encountered an error while extracting GSP region data from ESO "
                                    "API.")
@@ -366,21 +410,23 @@ class Geocoder:
                        for region_id in gsp_regions}
         with open(self.gsp_boundaries_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_regions, pickle_fid)
-        logging.info(f"GSP boundaries extracted and pickled to '{self.gsp_boundaries_cache_file}'")
+        logging.info("GSP boundaries extracted and pickled to '%s'", self.gsp_boundaries_cache_file)
         return gsp_regions
 
-    def load_dno_boundaries(self):
+    def _load_dno_boundaries(self):
         """
         Load the DNO License Area boundaries, either from local cache if available, else fetch from
         ESO Data Portal API.
         """
         if os.path.isfile(self.dno_boundaries_cache_file):
+            logging.debug("Loading DNO boundaries from cache ('%s')",
+                          self.dno_boundaries_cache_file)
             with open(self.dno_boundaries_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the DNO License Area boundary data from NGESO's Data Portal API "
                      "(this only needs to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
-        success, api_response = self.fetch_from_api(eso_url)
+        success, api_response = self._fetch_from_api(eso_url)
         if success:
             raw = json.loads(api_response.text)
             dno_regions = {}
@@ -396,8 +442,8 @@ class Geocoder:
                        for region_id in dno_regions}
         with open(self.dno_boundaries_cache_file, "wb") as pickle_fid:
             pickle.dump((dno_regions, dno_names), pickle_fid)
-        logging.info("DNO License Area boundaries extracted and pickled to "
-                     f"'{self.dno_boundaries_cache_file}'")
+        logging.info("DNO License Area boundaries extracted and pickled to '%s'",
+                     self.dno_boundaries_cache_file)
         return dno_regions, dno_names
 
     def get_dno_regions(self):
@@ -415,10 +461,10 @@ class Geocoder:
             (Name, LongName).
         """
         if self.dno_regions is None:
-            self.dno_regions = self.load_dno_boundaries()
+            self.dno_regions = self._load_dno_boundaries()
         return self.dno_regions
 
-    def load_gsp_lookup(self):
+    def _load_gsp_lookup(self):
         """Load the lookup of Region <-> GSP <-> GNode."""
         if os.path.isfile(self.gsp_lookup_cache_file):
             with open(self.gsp_lookup_cache_file, "rb") as pickle_fid:
@@ -426,7 +472,7 @@ class Geocoder:
         logging.info("Extracting the GSP lookup data from NGESO's Data Portal API (this only needs "
                      "to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/bbe2cc72-a6c6-46e6-8f4e-48b879467368/download/gsp_gnode_directconnect_region_lookup.csv"
-        success, api_response = self.fetch_from_api(eso_url)
+        success, api_response = self._fetch_from_api(eso_url)
         if success:
             f = StringIO(str(api_response.text).replace("\ufeff", "")) # Remove BOM character
             gsp_lookup = pd.read_csv(f)
@@ -436,12 +482,14 @@ class Geocoder:
                                    "API.")
         with open(self.gsp_lookup_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_lookup, pickle_fid)
-        logging.info(f"GSP lookup extracted and pickled to '{self.gsp_lookup_cache_file}'")
+        logging.info("GSP lookup extracted and pickled to '%s'", self.gsp_lookup_cache_file)
         return gsp_lookup
 
-    def load_datazone_lookup(self):
+    def _load_datazone_lookup(self):
         """Load a lookup of Scottish LLSOA <-> Datazone."""
         if os.path.isfile(self.dz_lookup_cache_file):
+            logging.debug("Loading LLSOA<->Datazone lookup from cache ('%s')",
+                          self.dz_lookup_cache_file)
             with open(self.dz_lookup_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
@@ -454,9 +502,11 @@ class Geocoder:
             pickle.dump(dz_lookup, pickle_fid)
         return dz_lookup
 
-    def load_constituency_lookup(self):
+    def _load_constituency_lookup(self):
         """Load a lookup of UK constituency -> Geospatial Centroid."""
         if os.path.isfile(self.constituency_cache_file):
+            logging.debug("Loading Constituency lookup from cache ('%s')",
+                          self.constituency_cache_file)
             with open(self.constituency_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the Constituency Centroids data (this only needs to be done "
@@ -469,11 +519,48 @@ class Geocoder:
                 constituency_lookup[match_str] = (float(latitude), float(longitude))
         with open(self.constituency_cache_file, "wb") as pickle_fid:
             pickle.dump(constituency_lookup, pickle_fid)
-        logging.info("Constituency lookup extracted and pickled to "
-                     f"'{self.constituency_cache_file}'")
+        logging.info("Constituency lookup extracted and pickled to '%s'",
+                     self.constituency_cache_file)
         return constituency_lookup
 
-    def cpo_geocode(self, postcode):
+    def cpo_geocode(self, pcs: pd.DataFrame) -> pd.DataFrame:
+        """
+        Geocode multiple postcodes using Code Point Open.
+
+        Parameters
+        ----------
+        `pcs` : Pandas.DataFrame
+            A Pandas DataFrame containing the postcodes (or partial postcodes) to geocode. Must
+            contain the column 'input_postcode'.
+
+        Returns
+        -------
+        Pandas.DataFrame
+            A Pandas DataFrame with columns: input_postcode (str), latitude (float), longitude
+            (float), match_status (int). The `match_status` shows the quality of the postcode lookup
+            - use the class attribute *self.status_codes* (a dict) to get a string representation.
+        """
+        pcs["id"] = np.arange(pcs.shape[0])
+        pcs["postcode_to_match"] = pcs.input_postcode.str.strip().str.upper().str.replace(" ", "")
+        if self.cpo is None:
+            self.cpo = self._load_code_point_open()
+        pcs = pcs.merge(self.cpo[["Postcode", "latitude", "longitude"]], how="left",
+                        left_on="postcode_to_match", right_on="Postcode")
+        pcs = pcs.groupby("id").agg(input_postcode=("input_postcode", "first"),
+                                    postcode_to_match=("postcode_to_match", "first"),
+                                    postcode_matched=("Postcode", "first"),
+                                    latitude=("latitude", np.nanmean),
+                                    longitude=("longitude", np.nanmean)).reset_index()
+        success = pcs.postcode_matched.notnull()
+        pcs.loc[success, "match_status"] = 1
+        if not pcs.postcode_matched.isnull().values.any():
+            return pcs[["input_postcode", "latitude", "longitude", "match_status"]]
+        cpo_geocode_one = lambda p: self.cpo_geocode_one(p.input_postcode)
+        pcs.loc[~success, ["latitude", "longitude", "match_status"]] = \
+            pcs.loc[~success].apply(cpo_geocode_one, axis=1)
+        return pcs[["input_postcode", "latitude", "longitude", "match_status"]]
+
+    def cpo_geocode_one(self, postcode: str) -> pd.Series:
         """
         Use the OS Code Point Open Database to geocode a postcode (or partial postcode using as much
         accuracy as the partial code permits).
@@ -485,18 +572,19 @@ class Geocoder:
 
         Returns
         -------
-        tuple
-            A tuple containing: latitude (float), longitude (float), status code (int). The status
-            code shows the quality of the postcode lookup - use the class attribute
-            *self.status_codes* (a dict) to get a string representation.
+        Pandas.Series
+            A Pandas Series with fields: input_postcode (str), latitude (float), longitude (float),
+            match_status (int). The status code shows the quality of the postcode lookup - use the
+            class attribute *self.status_codes* (a dict) to get a string representation.
         """
         if self.cpo is None:
-            self.cpo = self.load_code_point_open()
+            self.cpo = self._load_code_point_open()
         postcode = postcode.upper()
-        match = self.cpo[self.cpo["Postcode"] == postcode.replace(" ", "")].agg("mean",
-                                                                                numeric_only=True)
-        if not isnan(match.latitude):
-            return match.latitude, match.longitude, 1
+        # match = self.cpo[self.cpo["Postcode"] == postcode.replace(" ", "")].agg("mean",
+                                                                                # numeric_only=True)
+        # if not np.isnan(match.latitude):
+            # match["match_status"] = 1
+            # return match[["latitude", "longitude", "match_status"]]
         if " " in postcode:
             outward, inward = postcode.split(" ", 1)
             myfilter = (self.cpo["outward_postcode"] == outward) & \
@@ -505,11 +593,12 @@ class Geocoder:
             outward = postcode
             myfilter = self.cpo["outward_postcode"] == outward
         match = self.cpo[myfilter].agg("mean", numeric_only=True)
-        if not isnan(match.latitude):
-            return match.latitude, match.longitude, 2
-        return None, None, 0
+        if not np.isnan(match.latitude):
+            match["match_status"] = 2
+            return match[["latitude", "longitude", "match_status"]]
+        return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
 
-    def gmaps_geocode(self, postcode, address=None):
+    def gmaps_geocode_one(self, postcode: str, address: Optional[str] = None) -> pd.Series:
         """
         Use the GMaps API to geocode a postcode (or partial postcode) and/or an address.
 
@@ -522,35 +611,45 @@ class Geocoder:
 
         Returns
         -------
-        tuple
-            A tuple containing: latitude (float), longitude (float), status code (int). The status
-            code shows the quality of the postcode lookup - use the class attribute
-            *self.status_codes* (a dict) to get a string representation.
+        Pandas.Series
+            A Pandas Series with fields: input_postcode (str), latitude (float), longitude (float),
+            match_status (int). The status code shows the quality of the postcode lookup - use the
+            class attribute *self.status_codes* (a dict) to get a string representation.
         """
+        if postcode is None and address is None:
+            raise GenericException("You must pass either postcode or address, or both.")
         if self.gmaps_key is None:
-            self.gmaps_key = self.load_gmaps_key()
+            self.gmaps_key = self._load_gmaps_key()
             if self.gmaps_key is not None:
                 self.gmaps = googlemaps.Client(key=self.gmaps_key)
         if self.gmaps_cache is None:
-            self.gmaps_cache = self.load_gmaps_cache()
-        sep = ", " if address else ""
+            self.gmaps_cache = self._load_gmaps_cache()
+        sep = ", " if address and postcode else ""
+        postcode = postcode if postcode is not None else ""
         address = address if address is not None else ""
         search_term = f"{address}{sep}{postcode}"
+        logging.debug("Querying Google Maps Geocoder API for '%s'", search_term)
         if search_term in self.gmaps_cache:
             geocode_result = self.gmaps_cache[search_term]
         else:
             if self.gmaps_key is None:
-                return None, None, 0
+                return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
             geocode_result = self.gmaps.geocode(search_term, region="uk")
             self.gmaps_cache[search_term] = geocode_result
         if not geocode_result or len(geocode_result) > 1:
-            return None, None, 0
+            return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
         geometry = geocode_result[0]["geometry"]
-        if geometry["location_type"] == "ROOFTOP" or geocode_result[0]["types"] == ["postal_code"]:
-            return geometry["location"]["lat"], geometry["location"]["lng"], 3
-        return None, None, 0
+        ok_loc_types = ["ROOFTOP", "GEOMETRIC_CENTER"]
+        if geometry["location_type"] in ok_loc_types or \
+            geocode_result[0]["types"] == ["postal_code"]:
+            return pd.Series({"latitude": geometry["location"]["lat"],
+                              "longitude": geometry["location"]["lng"],
+                              "match_status": 3})
+        return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
 
-    def geocode(self, postcodes=None, addresses=None):
+    def geocode(self,
+                postcodes: Optional[Iterable[str]] = None,
+                addresses: Optional[Iterable[str]] = None) -> List[Tuple[float, float, int]]:
         """
         Geocode several postcodes and/or addresses.
 
@@ -574,8 +673,8 @@ class Geocoder:
 
         Notes
         -----
-        The input iterables can be any Python object which can be looped over with a for loop e.g.
-        a list, tuple, Numpy array etc.
+        The input iterables can be any Python object which can be interpreted by Pandas.DataFrame()
+        e.g. a list, tuple, Numpy array etc.
         If you pass only postcodes, this method will priotiise OS Code Point Open as the geocoder.
         If a postcode fails to geocode using OS CPO, it will be geocoded with GMaps.
         """
@@ -584,19 +683,39 @@ class Geocoder:
             raise GenericException("You must pass either postcodes or addresses, or both.")
         postcodes = [None for a in addresses] if postcodes is None else list(postcodes)
         addresses = [None for p in postcodes] if addresses is None else list(addresses)
-        tot = len(postcodes)
-        for i, (postcode, address) in enumerate(zip(postcodes, addresses)):
-            if (postcode, address) in self.cache:
-                results.append(self.cache[(postcode, address)])
-            else:
-                results.append(self.geocode_one(postcode, address))
-                self.cache[(postcode, address)] = results[-1]
-            if self.progress_bar and (i % 10 == 0 or i == tot - 1):
-                print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     POSTCODE", suffix="",
-                               decimals=2, bar_length=100)
-        return results
+        logging.debug("Geocoding %s postcodes (%s addresses)", len(postcodes), len(addresses))
+        inputs = pd.DataFrame({"input_postcode": postcodes, "input_address": addresses})
+        inputs["id"] = np.arange(inputs.shape[0])
+        results = inputs.merge(self.cache, how="left", on=["input_postcode", "input_address"])
+        results_cols = ["latitude", "longitude", "match_status"]
+        if not results.latitude.isnull().any():
+            return results[results_cols].to_records(index=False)
+        use_cpo = results.latitude.isnull() & results.input_address.isnull()
+        if use_cpo.any():
+            logging.debug("Geocoding %s postcodes using Code Point Open", use_cpo.sum())
+            results.loc[use_cpo, results_cols] = \
+                self.cpo_geocode(inputs.loc[use_cpo, ["input_postcode"]])[results_cols]
+            logging.debug("Successfully geocoded %s postcodes using Code Point Open",
+                          (results.latitude.notnull()).sum())
+        use_gmaps = results.latitude.isnull()
+        if use_gmaps.any():
+            logging.debug("Geocoding %s postcodes/addresses using Google Maps", use_gmaps.sum())
+            gmaps_geocode = lambda i: self.gmaps_geocode_one(i.input_postcode, i.input_address)
+            results.loc[use_gmaps, results_cols] = \
+                inputs.loc[use_gmaps].apply(gmaps_geocode, axis=1)[results_cols]
+            logging.debug("Successfully geocoded %s postcodes/addresses using Google Maps",
+                          (use_gmaps & results.latitude.notnull()).sum())
+        results["match_status"] = results.match_status.astype(int)
+        logging.debug("Adding postcodes/addresses to cache")
+        cache = pd.concat([self.cache, results[results.latitude.notnull()].drop(columns="id")],
+                          ignore_index=True)
+        self.cache = cache.drop_duplicates(subset=["input_postcode", "input_address"], keep="last",
+                                           ignore_index=True)
+        return results[results_cols].to_records(index=False)
 
-    def geocode_one(self, postcode=None, address=None):
+    def geocode_one(self,
+                    postcode: Optional[str] = None,
+                    address: Optional[str] = None) -> Tuple[float, float, int]:
         """
         Geocode a single postcode and/or address.
 
@@ -623,12 +742,14 @@ class Geocoder:
         if postcode is None and address is None:
             raise GenericException("You must specify either a postcode or an address, or both.")
         if address is None:
-            lat, lon, status = self.cpo_geocode(postcode)
+            lat, lon, status = self.cpo_geocode_one(postcode)
             if status > 0:
                 return lat, lon, status
-        return self.gmaps_geocode(postcode, address)
+        return self.gmaps_geocode_one(postcode, address).to_records(index=False)
 
-    def geocode_llsoa(self, llsoa):
+    def geocode_llsoa(self,
+                      llsoa: Union[str, Iterable[str]]
+                     ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
         """
         Geocode an LLSOA using the Population Weighted Centroid.
 
@@ -639,7 +760,7 @@ class Geocoder:
 
         Returns
         -------
-        tuple or list of tuples
+        Tuple or List of Tuples
             If a single LLSOA was passed (i.e. a string), the output be a tuple containing: latitude
             (float), longitude (float). If several LLSOAs are passed (i.e. an iterable of strings),
             the output will be a list of tuples which aligns with the input iterable.
@@ -652,19 +773,21 @@ class Geocoder:
         In Scotland, one can use either LLSOA codes or Datazones, this method supports both.
         """
         if self.llsoa_lookup is None:
-            self.llsoa_lookup = self.load_llsoa_lookup()
+            self.llsoa_lookup = self._load_llsoa_lookup()
         if isinstance(llsoa, str):
-            return self.llsoa_centroid(llsoa)
+            return self._llsoa_centroid(llsoa)
         results = []
         tot = len(llsoa)
         for i, llsoa_ in enumerate(llsoa):
-            results.append(self.llsoa_centroid(llsoa_))
+            results.append(self._llsoa_centroid(llsoa_))
             if self.progress_bar and (i % 10 == 0 or i == tot - 1):
                 print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     LLSOA", suffix="",
                                decimals=2, bar_length=100)
         return results
 
-    def reverse_geocode_llsoa(self, latlons, datazones=False):
+    def reverse_geocode_llsoa(self,
+                              latlons: List[Tuple[float, float]],
+                              datazones: bool = False) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to LLSOA.
 
@@ -684,19 +807,21 @@ class Geocoder:
         """
         if not SHAPELY_AVAILABLE:
             raise GenericException("Geocode was unable to import the Shapely library, follow the "
-                                   "installation instaructions at "
+                                   "installation instructions at "
                                    "https://github.com/SheffieldSolar/Geocode")
         if self.llsoa_regions is None:
-            self.llsoa_regions = self.load_llsoa_boundaries()
-        results = self.reverse_geocode(latlons, self.llsoa_regions)
+            self.llsoa_regions = self._load_llsoa_boundaries()
+        results = self._reverse_geocode(latlons, self.llsoa_regions)
         if datazones:
             if self.dz_lookup is None:
-                self.dz_lookup = self.load_datazone_lookup()
+                self.dz_lookup = self._load_datazone_lookup()
             results = [llsoacd if llsoacd not in self.dz_lookup else self.dz_lookup[llsoacd]
                        for llsoacd in results]
         return results
 
-    def reverse_geocode(self, coords, regions):
+    def _reverse_geocode(self,
+                        coords: List[Tuple[float, float]],
+                        regions: Dict) -> List:
         """
         Generic method to reverse-geocode x, y coordinates to regions.
 
@@ -743,9 +868,11 @@ class Geocoder:
                 results.append(None)
         return results
 
-    def reverse_geocode_gsp(self, latlons):
+    def reverse_geocode_gsp(self,
+                            latlons: List[Tuple[float, float]]
+                           ) -> Tuple[List[int], List[List[Dict]]]:
         """
-        Reverse-geocode latitudes and longitudes to LLSOA.
+        Reverse-geocode latitudes and longitudes to GSP.
 
         Parameters
         ----------
@@ -771,28 +898,30 @@ class Geocoder:
                                    "installation instructions at "
                                    "https://github.com/SheffieldSolar/Geocode")
         if self.gsp_regions is None:
-            self.gsp_regions = self.load_gsp_boundaries()
+            self.gsp_regions = self._load_gsp_boundaries()
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
         # Rather than re-project the region boundaries, re-project the input lat/lons
         # (easier, but slightly slower if reverse-geocoding a lot)
-        eastings, northings = self.latlon2bng(lons, lats)
-        results = self.reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
+        eastings, northings = self._latlon2bng(lons, lats)
+        results = self._reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
         if self.gsp_lookup is None:
-            self.gsp_lookup = self.load_gsp_lookup()
+            self.gsp_lookup = self._load_gsp_lookup()
         reg_lookup = {r: self.gsp_lookup[self.gsp_lookup.region_id == r].to_dict(orient='records')
                       for r in list(set(results))}
         results_more = [reg_lookup[r] if r is not None else None for r in results]
         return results, results_more
 
-    def llsoa_centroid(self, llsoa):
+    def _llsoa_centroid(self, llsoa):
         """Lookup the PWC for a given LLSOA code."""
         try:
             return self.llsoa_lookup[llsoa]
         except KeyError:
             return None, None
 
-    def geocode_constituency(self, constituency):
+    def geocode_constituency(self,
+                             constituency: Union[str, Iterable[str]]
+                            ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
         """
         Geocode a UK Constituency using the geospatial centroid.
 
@@ -816,19 +945,19 @@ class Geocoder:
         Constituencies are identified by their full name, case-insensitive, ignoring spaces.
         """
         if self.constituency_lookup is None:
-            self.constituency_lookup = self.load_constituency_lookup()
+            self.constituency_lookup = self._load_constituency_lookup()
         if isinstance(constituency, str):
-            return self.constituency_centroid(constituency)
+            return self._constituency_centroid(constituency)
         results = []
         tot = len(constituency)
         for i, constituency_ in enumerate(constituency):
-            results.append(self.constituency_centroid(constituency_))
+            results.append(self._constituency_centroid(constituency_))
             if self.progress_bar and (i % 10 == 0 or i == tot - 1):
                 print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     CONSTITUENCY", suffix="",
                                decimals=2, bar_length=100)
         return results
 
-    def constituency_centroid(self, constituency):
+    def _constituency_centroid(self, constituency):
         """Lookup the GC for a given constituency."""
         try:
             match_str = constituency.strip().replace(" ", "").replace(",", "").lower()
@@ -837,7 +966,8 @@ class Geocoder:
             return None, None
 
     @staticmethod
-    def bng2latlon(eastings, northings):
+    def _bng2latlon(eastings: Iterable[Union[float, int]],
+                    northings: Iterable[Union[float, int]]) -> Tuple[List[float], List[float]]:
         """
         Convert Eastings and Northings (a.k.a British National Grid a.k.a OSGB 1936) to latitudes
         and longitudes (WGS 1984).
@@ -867,7 +997,7 @@ class Geocoder:
         return lons, lats
 
     @staticmethod
-    def latlon2bng(lons, lats):
+    def _latlon2bng(lons: List[float], lats: List[float]) -> Tuple[List[float], List[float]]:
         """
         Convert latitudes and longitudes (WGS 1984) to Eastings and Northings (a.k.a British
         National Grid a.k.a OSGB 1936).
@@ -881,9 +1011,9 @@ class Geocoder:
 
         Returns
         -------
-        `eastings` : iterable of floats or ints
+        `eastings` : list of floats or ints
             Easting co-ordinates.
-        `northings` : iterable of floats or ints
+        `northings` : list of floats or ints
             Northing co-ordinates.
 
         Notes
@@ -961,11 +1091,9 @@ def query_yes_no(question, default="yes"):
         choice = input().lower()
         if default is not None and choice == '':
             return valid[default]
-        elif choice in valid:
+        if choice in valid:
             return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' "
-                             "(or 'y' or 'n').\n")
+        sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 def parse_options():
     """Parse command line options."""
@@ -1000,7 +1128,7 @@ def debug():
         results = geocoder.geocode_llsoa(sample_llsoas)
     logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for llsoa, (lat, lon) in zip(sample_llsoas, results):
-        logging.info(f"{llsoa} :    {lat}, {lon}")
+        logging.info("%s :    %s, %s", llsoa, lat, lon)
     sample_latlons = [
         (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
         (50.409, -4.672), (52.940, -1.146), (57.060, -2.874), (56.31, -4.)
@@ -1009,9 +1137,9 @@ def debug():
     logging.info("Reverse geocoding some latlons to LSOAs")
     with Geocoder(progress_bar=False) as geocoder:
         results = geocoder.reverse_geocode_llsoa(sample_latlons, datazones=True)
-    logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for (lat, lon), llsoa in zip(sample_latlons, results):
-        logging.info(f"{lat}, {lon} :    {llsoa}")
+        logging.info("%s, %s :    %s", lat, lon, llsoa)
     sample_file = os.path.join(SCRIPT_DIR, "sample_latlons.txt")
     with open(sample_file) as fid:
         sample_latlons = [tuple(map(float, line.strip().split(",")))
@@ -1020,10 +1148,10 @@ def debug():
     logging.info("Reverse geocoding some latlons to GSPs")
     with Geocoder(progress_bar=False) as geocoder:
         results, results_more = geocoder.reverse_geocode_gsp(sample_latlons)
-    logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for (lat, lon), region_id, extra in zip(sample_latlons, results, results_more):
-        logging.info(f"{lat}, {lon} :    {region_id}")
-        logging.info(f"{extra}")
+        logging.info("%s, %s :    %s", lat, lon, region_id)
+        logging.info("%s", extra)
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]
@@ -1031,9 +1159,9 @@ def debug():
     logging.info("Geocoding some constituencies")
     with Geocoder(progress_bar=False) as geocoder:
         results = geocoder.geocode_constituency(sample_constituencies)
-    logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
-        logging.info(f"{constituency} :    {lat}, {lon}")
+        logging.info("%s :    %s, %s", constituency, lat, lon)
     sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
     with open(sample_file) as fid:
         postcodes = [line.strip() for line in fid if line.strip()][:10]
@@ -1041,37 +1169,40 @@ def debug():
     logging.info("Geocoding some postcodes")
     with Geocoder(progress_bar=False) as geocoder:
         results = geocoder.geocode(postcodes=postcodes)
-    logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for postcode, (lat, lon, status) in zip(postcodes, results):
-        logging.info(f"{postcode} :    {lat}, {lon}    ->  "
-                     f"{geocoder.status_codes[status]}")
+        logging.info("%s :    %s, %s    -> %s", postcode, lat, lon, geocoder.status_codes[status])
 
 def main():
     """Run the Command Line Interface."""
     options = parse_options()
     if options.clear_cache:
-        with Geocoder() as geocoder:
-            geocoder.clear_cache()
+        geocoder = Geocoder()
+        geocoder.clear_cache()
     if options.cpo_zip is not None:
+        logging.info("Updating Code Point Open data")
         with Geocoder() as geocoder:
             copyfile(options.cpo_zip, geocoder.cpo_zipfile)
-            geocoder.load_code_point_open(force_reload=True)
+            logging.debug("Copied file '%s' to '%s'", options.cpo_zip, geocoder.cpo_zipfile)
+            geocoder._load_code_point_open(force_reload=True)
+        logging.info("Finished updating Code Point Open data")
     if options.gmaps_key is not None:
         logging.info("Loading GMaps key")
         with Geocoder() as geocoder:
             with open(geocoder.gmaps_key_file, "w") as fid:
                 fid.write(options.gmaps_key)
-            if geocoder.load_gmaps_key() == options.gmaps_key:
-                logging.info(f"GMaps key saved to '{geocoder.gmaps_key_file}'")
+            if geocoder._load_gmaps_key() == options.gmaps_key:
+                logging.info("GMaps key saved to '%s'", geocoder.gmaps_key_file)
     if options.setup:
+        logging.info("Running forced setup")
         with Geocoder() as geocoder:
             geocoder.force_setup()
     if options.debug:
         debug()
 
 if __name__ == "__main__":
-    default_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
-    fmt = os.environ.get("GEOCODE_LOGGING_FMT", default_fmt)
-    datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
-    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "INFO"))
+    DEFAULT_FMT = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
+    FMT = os.environ.get("GEOCODE_LOGGING_FMT", DEFAULT_FMT)
+    DATEFMT = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
+    logging.basicConfig(format=FMT, datefmt=DATEFMT, level=os.environ.get("LOGLEVEL", "DEBUG"))
     main()
