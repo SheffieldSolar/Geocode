@@ -186,7 +186,6 @@ class Geocoder:
             if old_versions_only and __version__.replace(".", "-") in cache_file:
                 continue
             os.remove(cache_file)
-            import pdb; pdb.set_trace()
             logging.debug("Deleted '%s'", cache_file)
 
     def force_setup(self):
