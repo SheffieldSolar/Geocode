@@ -256,7 +256,7 @@ Jamie Taylor, 2020-06-12
 
 ## Documentation
 
-* Coming soon
+See [here](https://sheffieldsolar.github.io/Geocode/build/html/index.html).
 
 ## How do I update?
 
