@@ -3,13 +3,12 @@
 """
 A lightweight geocoder that uses OS Code Point Open where possible for postcodes and GMaps API for
 everything else.
-
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
 - Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 import os
 import sys
@@ -27,6 +26,7 @@ import glob
 import requests
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 import googlemaps
 import pyproj
 import shapefile
@@ -94,14 +94,17 @@ class Geocoder:
         self.llsoa_boundaries_cache_file = os.path.join(
             self.ons_dir, f"llsoa_boundaries_{version_string}.p"
         )
-        self.gsp_boundaries_cache_file = os.path.join(
-            self.eso_dir, f"gsp_boundaries_{version_string}.p"
+        self.gsp_boundaries_20181031_cache_file = os.path.join(
+            self.eso_dir, f"gsp_boundaries_20181031_{version_string}.p"
+        )
+        self.gsp_boundaries_20220314_cache_file = os.path.join(
+            self.eso_dir, f"gsp_boundaries_20220314_{version_string}.p"
         )
         self.dno_boundaries_cache_file = os.path.join(
             self.eso_dir, f"dno_boundaries_{version_string}.p"
         )
-        self.gsp_lookup_cache_file = os.path.join(
-            self.eso_dir, f"gsp_lookup_{version_string}.p"
+        self.gsp_lookup_20181031_cache_file = os.path.join(
+            self.eso_dir, f"gsp_lookup_20181031_{version_string}.p"
         )
         self.dz_lookup_cache_file = os.path.join(self.ons_dir,
                                                  f"datazone_lookup_{version_string}.p")
@@ -116,8 +119,9 @@ class Geocoder:
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.gsp_regions = None
+        self.gsp_regions_20181031 = None
         self.dno_regions = None
-        self.gsp_lookup = None
+        self.gsp_lookup_20181031 = None
         self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
         self.dz_lookup = None
@@ -188,11 +192,10 @@ class Geocoder:
 
     def force_setup(self):
         """Download all data and setup caches."""
+        self._load_gsp_boundaries_20220314()
         self._load_code_point_open(force_reload=False)
         self._load_llsoa_lookup()
         self._load_llsoa_boundaries()
-        self._load_gsp_boundaries()
-        self._load_gsp_lookup()
         self._load_datazone_lookup()
         self._load_constituency_lookup()
         self._load_dno_boundaries()
@@ -378,18 +381,18 @@ class Geocoder:
                      self.llsoa_boundaries_cache_file)
         return llsoa_regions
 
-    def _load_gsp_boundaries(self):
+    def _load_gsp_boundaries_20181031(self):
         """
-        Load the GSP / GNode boundaries, either from local cache if available, else fetch from ESO
-        Data Portal API.
+        Load the 20181031 GSP / GNode boundaries, either from local cache if available, else fetch
+        from ESO Data Portal API.
         """
-        if os.path.isfile(self.gsp_boundaries_cache_file):
-            logging.debug("Loading GSP boundaries from cache ('%s')",
-                          self.gsp_boundaries_cache_file)
-            with open(self.gsp_boundaries_cache_file, "rb") as pickle_fid:
+        if os.path.isfile(self.gsp_boundaries_20181031_cache_file):
+            logging.debug("Loading 20181031 GSP boundaries from cache ('%s')",
+                          self.gsp_boundaries_20181031_cache_file)
+            with open(self.gsp_boundaries_20181031_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
-        logging.info("Extracting the GSP boundary data from NGESO's Data Portal API (this only "
-                     "needs to be done once)")
+        logging.info("Extracting the 20181031 GSP boundary data from NGESO's Data Portal API (this "
+                     "only needs to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/a3ed5711-407a-42a9-a63a-011615eea7e0/download/gsp_regions_20181031.geojson"
         success, api_response = self._fetch_from_api(eso_url)
         if success:
@@ -407,10 +410,45 @@ class Geocoder:
                                    "API.")
         gsp_regions = {region_id: (gsp_regions[region_id], gsp_regions[region_id].bounds)
                        for region_id in gsp_regions}
-        with open(self.gsp_boundaries_cache_file, "wb") as pickle_fid:
+        with open(self.gsp_boundaries_20181031_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_regions, pickle_fid)
-        logging.info("GSP boundaries extracted and pickled to '%s'", self.gsp_boundaries_cache_file)
+        logging.info("20181031 GSP boundaries extracted and pickled to '%s'",
+                     self.gsp_boundaries_20181031_cache_file)
         return gsp_regions
+
+    def _load_gsp_boundaries_20220314(self):
+        """
+        Load the 20220314 GSP / GNode boundaries, either from local cache if available, else fetch
+        from ESO Data Portal API.
+        """
+        if os.path.isfile(self.gsp_boundaries_20220314_cache_file):
+            logging.debug("Loading 20220314 GSP boundaries from cache ('%s')",
+                          self.gsp_boundaries_20220314_cache_file)
+            with open(self.gsp_boundaries_20220314_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        logging.info("Extracting the 20220314 GSP boundary data from NGESO's Data Portal API (this "
+                     "only needs to be done once)")
+        eso_url = "https://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson"
+        success, api_response = self._fetch_from_api(eso_url)
+        if success:
+            raw = json.loads(api_response.text)
+            gsp_regions = gpd.GeoDataFrame.from_features(raw["features"],
+                                                         crs=raw["crs"]["properties"]["name"])
+            gsp_regions.geometry = gsp_regions.buffer(0)
+        else:
+            raise GenericException("Encountered an error while extracting GSP region data from ESO "
+                                   "API.")
+        ### For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6
+        gsp_regions["bounds"] = gsp_regions.bounds.apply(tuple, axis=1)
+        gsp_regions_dict = gsp_regions.set_index(["GSPs", "GSPGroup"]).to_dict("index")
+        for r in gsp_regions_dict:
+            gsp_regions_dict[r] = tuple(gsp_regions_dict[r].values())
+        ######
+        with open(self.gsp_boundaries_20220314_cache_file, "wb") as pickle_fid:
+            pickle.dump(gsp_regions_dict, pickle_fid)
+        logging.info("20220314 GSP boundaries extracted and pickled to '%s'",
+                     self.gsp_boundaries_20220314_cache_file)
+        return gsp_regions_dict
 
     def _load_dno_boundaries(self):
         """
@@ -463,10 +501,10 @@ class Geocoder:
             self.dno_regions = self._load_dno_boundaries()
         return self.dno_regions
 
-    def _load_gsp_lookup(self):
+    def _load_gsp_lookup_20181031(self):
         """Load the lookup of Region <-> GSP <-> GNode."""
-        if os.path.isfile(self.gsp_lookup_cache_file):
-            with open(self.gsp_lookup_cache_file, "rb") as pickle_fid:
+        if os.path.isfile(self.gsp_lookup_20181031_cache_file):
+            with open(self.gsp_lookup_20181031_cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the GSP lookup data from NGESO's Data Portal API (this only needs "
                      "to be done once)")
@@ -479,9 +517,9 @@ class Geocoder:
         else:
             raise GenericException("Encountered an error while extracting GSP lookup data from ESO "
                                    "API.")
-        with open(self.gsp_lookup_cache_file, "wb") as pickle_fid:
+        with open(self.gsp_lookup_20181031_cache_file, "wb") as pickle_fid:
             pickle.dump(gsp_lookup, pickle_fid)
-        logging.info("GSP lookup extracted and pickled to '%s'", self.gsp_lookup_cache_file)
+        logging.info("GSP lookup extracted and pickled to '%s'", self.gsp_lookup_20181031_cache_file)
         return gsp_lookup
 
     def _load_datazone_lookup(self):
@@ -819,8 +857,8 @@ class Geocoder:
         return results
 
     def _reverse_geocode(self,
-                        coords: List[Tuple[float, float]],
-                        regions: Dict) -> List:
+                         coords: List[Tuple[float, float]],
+                         regions: Dict) -> List:
         """
         Generic method to reverse-geocode x, y coordinates to regions.
 
@@ -871,7 +909,44 @@ class Geocoder:
                             latlons: List[Tuple[float, float]]
                            ) -> Tuple[List[int], List[List[Dict]]]:
         """
-        Reverse-geocode latitudes and longitudes to GSP.
+        Reverse-geocode latitudes and longitudes to GSP using the 20220314 definitions.
+
+        Parameters
+        ----------
+        `latlons` : list of tuples
+            A list of tuples containing (latitude, longitude).
+
+        Returns
+        -------
+        `results` : list of ints
+            A list of tuples containing (<GSPs>, <GSPGroup>), aligned with the input *latlons*.
+
+        Notes
+        -----
+        Return format needs some work, maybe switch to DataFrames in future release.
+        """
+        if not SHAPELY_AVAILABLE:
+            raise GenericException("Geocode was unable to import the Shapely library, follow the "
+                                   "installation instructions at "
+                                   "https://github.com/SheffieldSolar/Geocode")
+        logging.debug("Reverse geocoding %s latlons to 20220314 GSP", len(latlons))
+        if self.gsp_regions is None:
+            self.gsp_regions = self._load_gsp_boundaries_20220314()
+        lats = [l[0] for l in latlons]
+        lons = [l[1] for l in latlons]
+        # Rather than re-project the region boundaries, re-project the input lat/lons
+        # (easier, but slightly slower if reverse-geocoding a lot)
+        logging.debug("Converting latlons to BNG")
+        eastings, northings = self._latlon2bng(lons, lats)
+        logging.debug("Reverse geocoding")
+        results = self._reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
+        return results
+
+    def reverse_geocode_gsp_20181031(self,
+                                     latlons: List[Tuple[float, float]]
+                                    ) -> Tuple[List[int], List[List[Dict]]]:
+        """
+        Reverse-geocode latitudes and longitudes to GSP using the 20181031 definitions.
 
         Parameters
         ----------
@@ -896,17 +971,18 @@ class Geocoder:
             raise GenericException("Geocode was unable to import the Shapely library, follow the "
                                    "installation instructions at "
                                    "https://github.com/SheffieldSolar/Geocode")
-        if self.gsp_regions is None:
-            self.gsp_regions = self._load_gsp_boundaries()
+        if self.gsp_regions_20181031 is None:
+            self.gsp_regions_20181031 = self._load_gsp_boundaries_20181031()
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
         # Rather than re-project the region boundaries, re-project the input lat/lons
         # (easier, but slightly slower if reverse-geocoding a lot)
         eastings, northings = self._latlon2bng(lons, lats)
-        results = self._reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
-        if self.gsp_lookup is None:
-            self.gsp_lookup = self._load_gsp_lookup()
-        reg_lookup = {r: self.gsp_lookup[self.gsp_lookup.region_id == r].to_dict(orient='records')
+        results = self._reverse_geocode(list(zip(northings, eastings)), self.gsp_regions_20181031)
+        if self.gsp_lookup_20181031 is None:
+            self.gsp_lookup_20181031 = self._load_gsp_lookup_20181031()
+        lookup = self.gsp_lookup_20181031
+        reg_lookup = {r: lookup[lookup.region_id == r].to_dict(orient="records")
                       for r in list(set(results))}
         results_more = [reg_lookup[r] if r is not None else None for r in results]
         return results, results_more
@@ -1043,6 +1119,7 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=2, bar_lengt
         number of decimals in percent complete (optional)
     `bar_length` : int
         character length of bar (optional)
+
     Notes
     -----
     Taken from `Stack Overflow <http://stackoverflow.com/a/34325723>`_.
@@ -1067,10 +1144,12 @@ def query_yes_no(question, default="yes"):
     `default` : string
         The presumed answer if the user just hits <Enter>. It must be "yes" (the default), "no" or
         None (meaning an answer is required of the user).
+
     Returns
     -------
     boolean
         Return value is True for "yes" or False for "no".
+
     Notes
     -----
     See http://stackoverflow.com/a/3041990
@@ -1146,11 +1225,10 @@ def debug():
     timerstart = TIME.time()
     logging.info("Reverse geocoding some latlons to GSPs")
     with Geocoder(progress_bar=False) as geocoder:
-        results, results_more = geocoder.reverse_geocode_gsp(sample_latlons)
+        results = geocoder.reverse_geocode_gsp(sample_latlons)
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
-    for (lat, lon), region_id, extra in zip(sample_latlons, results, results_more):
+    for (lat, lon), region_id in zip(sample_latlons, results):
         logging.info("%s, %s :    %s", lat, lon, region_id)
-        logging.info("%s", extra)
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]

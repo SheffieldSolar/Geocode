@@ -10,6 +10,7 @@ Jamie Taylor 2020-05-22
 """
 
 import unittest
+from numpy.testing import assert_almost_equal
 
 from geocode import Geocoder
 
@@ -33,7 +34,7 @@ class geocodeTestCase(unittest.TestCase):
             (55.91836588770352, -4.21934323024909)
         ]
         with Geocoder(progress_bar=False) as geo:
-            self.assertAlmostEqual(geo.geocode_llsoa(llsoas), centroids)
+            assert_almost_equal(geo.geocode_llsoa(llsoas), centroids)
 
     def test_reverse_geocode_llsoa(self):
         """
@@ -65,7 +66,7 @@ class geocodeTestCase(unittest.TestCase):
             (55.90118449, -4.743636917),
         ]
         with Geocoder(progress_bar=False) as geo:
-            self.assertAlmostEqual(geo.geocode_constituency(constituencies), latlons)
+            assert_almost_equal(geo.geocode_constituency(constituencies), latlons)
 
     # def test_reverse_geocode_gsp(self):
         # """

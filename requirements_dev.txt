@@ -1,0 +1,4 @@
+pylint
+sphinx
+numpydoc
+sphinx_rtd_theme

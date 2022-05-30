@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>geocode &mdash; Geocode 0.9.1 documentation</title>
+  <title>geocode &mdash; Geocode 0.10.0 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -13,6 +13,7 @@
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -70,13 +71,12 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">A lightweight geocoder that uses OS Code Point Open where possible for postcodes and GMaps API for</span>
 <span class="sd">everything else.</span>
-
 <span class="sd">- Jamie Taylor &lt;jamie.taylor@sheffield.ac.uk&gt;</span>
 <span class="sd">- Ethan Jones &lt;ejones18@sheffield.ac.uk&gt;</span>
 <span class="sd">- First Authored: 2019-10-08</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.9.1&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.10.0&quot;</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
@@ -94,6 +94,7 @@
 <span class="kn">import</span> <span class="nn">requests</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
 <span class="kn">import</span> <span class="nn">googlemaps</span>
 <span class="kn">import</span> <span class="nn">pyproj</span>
 <span class="kn">import</span> <span class="nn">shapefile</span>
@@ -161,14 +162,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">llsoa_boundaries_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ons_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;llsoa_boundaries_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gsp_boundaries_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gsp_boundaries_20181031_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gsp_boundaries_20220314_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dno_boundaries_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;dno_boundaries_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gsp_lookup_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eso_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;gsp_lookup_20181031_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dz_lookup_cache_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ons_dir</span><span class="p">,</span>
                                                  <span class="sa">f</span><span class="s2">&quot;datazone_lookup_</span><span class="si">{</span><span class="n">version_string</span><span class="si">}</span><span class="s2">.p&quot;</span><span class="p">)</span>
@@ -183,8 +187,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">llsoa_lookup</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llsoa_regions</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions_20181031</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dno_regions</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llsoa_reverse_lookup</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">constituency_lookup</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dz_lookup</span> <span class="o">=</span> <span class="kc">None</span>
@@ -251,16 +256,14 @@
             <span class="k">if</span> <span class="n">old_versions_only</span> <span class="ow">and</span> <span class="n">__version__</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">cache_file</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">cache_file</span><span class="p">)</span>
-            <span class="kn">import</span> <span class="nn">pdb</span><span class="p">;</span> <span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Deleted &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">cache_file</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geocoder.force_setup"><a class="viewcode-back" href="../modules.html#geocode.Geocoder.force_setup">[docs]</a>    <span class="k">def</span> <span class="nf">force_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Download all data and setup caches.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_boundaries_20220314</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_code_point_open</span><span class="p">(</span><span class="n">force_reload</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_llsoa_lookup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_llsoa_boundaries</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_boundaries</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_lookup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_datazone_lookup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_constituency_lookup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_dno_boundaries</span><span class="p">()</span></div>
@@ -446,18 +449,18 @@
                      <span class="bp">self</span><span class="o">.</span><span class="n">llsoa_boundaries_cache_file</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">llsoa_regions</span>
 
-    <span class="k">def</span> <span class="nf">_load_gsp_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_load_gsp_boundaries_20181031</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load the GSP / GNode boundaries, either from local cache if available, else fetch from ESO</span>
-<span class="sd">        Data Portal API.</span>
+<span class="sd">        Load the 20181031 GSP / GNode boundaries, either from local cache if available, else fetch</span>
+<span class="sd">        from ESO Data Portal API.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span><span class="p">):</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading GSP boundaries from cache (&#39;</span><span class="si">%s</span><span class="s2">&#39;)&quot;</span><span class="p">,</span>
-                          <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span><span class="p">)</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading 20181031 GSP boundaries from cache (&#39;</span><span class="si">%s</span><span class="s2">&#39;)&quot;</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_fid</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extracting the GSP boundary data from NGESO&#39;s Data Portal API (this only &quot;</span>
-                     <span class="s2">&quot;needs to be done once)&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extracting the 20181031 GSP boundary data from NGESO&#39;s Data Portal API (this &quot;</span>
+                     <span class="s2">&quot;only needs to be done once)&quot;</span><span class="p">)</span>
         <span class="n">eso_url</span> <span class="o">=</span> <span class="s2">&quot;http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/a3ed5711-407a-42a9-a63a-011615eea7e0/download/gsp_regions_20181031.geojson&quot;</span>
         <span class="n">success</span><span class="p">,</span> <span class="n">api_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetch_from_api</span><span class="p">(</span><span class="n">eso_url</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
@@ -475,10 +478,45 @@
                                    <span class="s2">&quot;API.&quot;</span><span class="p">)</span>
         <span class="n">gsp_regions</span> <span class="o">=</span> <span class="p">{</span><span class="n">region_id</span><span class="p">:</span> <span class="p">(</span><span class="n">gsp_regions</span><span class="p">[</span><span class="n">region_id</span><span class="p">],</span> <span class="n">gsp_regions</span><span class="p">[</span><span class="n">region_id</span><span class="p">]</span><span class="o">.</span><span class="n">bounds</span><span class="p">)</span>
                        <span class="k">for</span> <span class="n">region_id</span> <span class="ow">in</span> <span class="n">gsp_regions</span><span class="p">}</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
             <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">gsp_regions</span><span class="p">,</span> <span class="n">pickle_fid</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;GSP boundaries extracted and pickled to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_cache_file</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;20181031 GSP boundaries extracted and pickled to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20181031_cache_file</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">gsp_regions</span>
+
+    <span class="k">def</span> <span class="nf">_load_gsp_boundaries_20220314</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load the 20220314 GSP / GNode boundaries, either from local cache if available, else fetch</span>
+<span class="sd">        from ESO Data Portal API.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span><span class="p">):</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading 20220314 GSP boundaries from cache (&#39;</span><span class="si">%s</span><span class="s2">&#39;)&quot;</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_fid</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extracting the 20220314 GSP boundary data from NGESO&#39;s Data Portal API (this &quot;</span>
+                     <span class="s2">&quot;only needs to be done once)&quot;</span><span class="p">)</span>
+        <span class="n">eso_url</span> <span class="o">=</span> <span class="s2">&quot;https://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson&quot;</span>
+        <span class="n">success</span><span class="p">,</span> <span class="n">api_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetch_from_api</span><span class="p">(</span><span class="n">eso_url</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">api_response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">gsp_regions</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="o">.</span><span class="n">from_features</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">],</span>
+                                                         <span class="n">crs</span><span class="o">=</span><span class="n">raw</span><span class="p">[</span><span class="s2">&quot;crs&quot;</span><span class="p">][</span><span class="s2">&quot;properties&quot;</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+            <span class="n">gsp_regions</span><span class="o">.</span><span class="n">geometry</span> <span class="o">=</span> <span class="n">gsp_regions</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="s2">&quot;Encountered an error while extracting GSP region data from ESO &quot;</span>
+                                   <span class="s2">&quot;API.&quot;</span><span class="p">)</span>
+        <span class="c1">### For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6</span>
+        <span class="n">gsp_regions</span><span class="p">[</span><span class="s2">&quot;bounds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gsp_regions</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">gsp_regions_dict</span> <span class="o">=</span> <span class="n">gsp_regions</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s2">&quot;GSPs&quot;</span><span class="p">,</span> <span class="s2">&quot;GSPGroup&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">gsp_regions_dict</span><span class="p">:</span>
+            <span class="n">gsp_regions_dict</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">gsp_regions_dict</span><span class="p">[</span><span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="c1">######</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">gsp_regions_dict</span><span class="p">,</span> <span class="n">pickle_fid</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;20220314 GSP boundaries extracted and pickled to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">gsp_boundaries_20220314_cache_file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gsp_regions_dict</span>
 
     <span class="k">def</span> <span class="nf">_load_dno_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -531,10 +569,10 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">dno_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_dno_boundaries</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dno_regions</span></div>
 
-    <span class="k">def</span> <span class="nf">_load_gsp_lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_load_gsp_lookup_20181031</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Load the lookup of Region &lt;-&gt; GSP &lt;-&gt; GNode.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_cache_file</span><span class="p">):</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_cache_file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031_cache_file</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031_cache_file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_fid</span><span class="p">)</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extracting the GSP lookup data from NGESO&#39;s Data Portal API (this only needs &quot;</span>
                      <span class="s2">&quot;to be done once)&quot;</span><span class="p">)</span>
@@ -547,9 +585,9 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="s2">&quot;Encountered an error while extracting GSP lookup data from ESO &quot;</span>
                                    <span class="s2">&quot;API.&quot;</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_cache_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031_cache_file</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_fid</span><span class="p">:</span>
             <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">gsp_lookup</span><span class="p">,</span> <span class="n">pickle_fid</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;GSP lookup extracted and pickled to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_cache_file</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;GSP lookup extracted and pickled to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031_cache_file</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">gsp_lookup</span>
 
     <span class="k">def</span> <span class="nf">_load_datazone_lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -887,8 +925,8 @@
         <span class="k">return</span> <span class="n">results</span></div>
 
     <span class="k">def</span> <span class="nf">_reverse_geocode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                        <span class="n">coords</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
-                        <span class="n">regions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">:</span>
+                         <span class="n">coords</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+                         <span class="n">regions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generic method to reverse-geocode x, y coordinates to regions.</span>
 
@@ -939,7 +977,44 @@
                             <span class="n">latlons</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]]]:</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Reverse-geocode latitudes and longitudes to GSP.</span>
+<span class="sd">        Reverse-geocode latitudes and longitudes to GSP using the 20220314 definitions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `latlons` : list of tuples</span>
+<span class="sd">            A list of tuples containing (latitude, longitude).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `results` : list of ints</span>
+<span class="sd">            A list of tuples containing (&lt;GSPs&gt;, &lt;GSPGroup&gt;), aligned with the input *latlons*.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Return format needs some work, maybe switch to DataFrames in future release.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">SHAPELY_AVAILABLE</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="s2">&quot;Geocode was unable to import the Shapely library, follow the &quot;</span>
+                                   <span class="s2">&quot;installation instructions at &quot;</span>
+                                   <span class="s2">&quot;https://github.com/SheffieldSolar/Geocode&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Reverse geocoding </span><span class="si">%s</span><span class="s2"> latlons to 20220314 GSP&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">latlons</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_boundaries_20220314</span><span class="p">()</span>
+        <span class="n">lats</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">latlons</span><span class="p">]</span>
+        <span class="n">lons</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">latlons</span><span class="p">]</span>
+        <span class="c1"># Rather than re-project the region boundaries, re-project the input lat/lons</span>
+        <span class="c1"># (easier, but slightly slower if reverse-geocoding a lot)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Converting latlons to BNG&quot;</span><span class="p">)</span>
+        <span class="n">eastings</span><span class="p">,</span> <span class="n">northings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_latlon2bng</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">lats</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Reverse geocoding&quot;</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_geocode</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">northings</span><span class="p">,</span> <span class="n">eastings</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="Geocoder.reverse_geocode_gsp_20181031"><a class="viewcode-back" href="../modules.html#geocode.Geocoder.reverse_geocode_gsp_20181031">[docs]</a>    <span class="k">def</span> <span class="nf">reverse_geocode_gsp_20181031</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                     <span class="n">latlons</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
+                                    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reverse-geocode latitudes and longitudes to GSP using the 20181031 definitions.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -964,17 +1039,18 @@
             <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="s2">&quot;Geocode was unable to import the Shapely library, follow the &quot;</span>
                                    <span class="s2">&quot;installation instructions at &quot;</span>
                                    <span class="s2">&quot;https://github.com/SheffieldSolar/Geocode&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_boundaries</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions_20181031</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions_20181031</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_boundaries_20181031</span><span class="p">()</span>
         <span class="n">lats</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">latlons</span><span class="p">]</span>
         <span class="n">lons</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">latlons</span><span class="p">]</span>
         <span class="c1"># Rather than re-project the region boundaries, re-project the input lat/lons</span>
         <span class="c1"># (easier, but slightly slower if reverse-geocoding a lot)</span>
         <span class="n">eastings</span><span class="p">,</span> <span class="n">northings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_latlon2bng</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">lats</span><span class="p">)</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_geocode</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">northings</span><span class="p">,</span> <span class="n">eastings</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_lookup</span><span class="p">()</span>
-        <span class="n">reg_lookup</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup</span><span class="o">.</span><span class="n">region_id</span> <span class="o">==</span> <span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s1">&#39;records&#39;</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reverse_geocode</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">northings</span><span class="p">,</span> <span class="n">eastings</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_regions_20181031</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_gsp_lookup_20181031</span><span class="p">()</span>
+        <span class="n">lookup</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gsp_lookup_20181031</span>
+        <span class="n">reg_lookup</span> <span class="o">=</span> <span class="p">{</span><span class="n">r</span><span class="p">:</span> <span class="n">lookup</span><span class="p">[</span><span class="n">lookup</span><span class="o">.</span><span class="n">region_id</span> <span class="o">==</span> <span class="n">r</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
                       <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">results</span><span class="p">))}</span>
         <span class="n">results_more</span> <span class="o">=</span> <span class="p">[</span><span class="n">reg_lookup</span><span class="p">[</span><span class="n">r</span><span class="p">]</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">results_more</span></div>
@@ -1111,6 +1187,7 @@
 <span class="sd">        number of decimals in percent complete (optional)</span>
 <span class="sd">    `bar_length` : int</span>
 <span class="sd">        character length of bar (optional)</span>
+
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
 <span class="sd">    Taken from `Stack Overflow &lt;http://stackoverflow.com/a/34325723&gt;`_.</span>
@@ -1135,10 +1212,12 @@
 <span class="sd">    `default` : string</span>
 <span class="sd">        The presumed answer if the user just hits &lt;Enter&gt;. It must be &quot;yes&quot; (the default), &quot;no&quot; or</span>
 <span class="sd">        None (meaning an answer is required of the user).</span>
+
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    boolean</span>
 <span class="sd">        Return value is True for &quot;yes&quot; or False for &quot;no&quot;.</span>
+
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
 <span class="sd">    See http://stackoverflow.com/a/3041990</span>
@@ -1214,11 +1293,10 @@
     <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reverse geocoding some latlons to GSPs&quot;</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">Geocoder</span><span class="p">(</span><span class="n">progress_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
-        <span class="n">results</span><span class="p">,</span> <span class="n">results_more</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">reverse_geocode_gsp</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">reverse_geocode_gsp</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">)</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-    <span class="k">for</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span> <span class="n">region_id</span><span class="p">,</span> <span class="n">extra</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">results_more</span><span class="p">):</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span> <span class="n">region_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">region_id</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">extra</span><span class="p">)</span>
     <span class="n">sample_constituencies</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Berwickshire Roxburgh and Selkirk&quot;</span><span class="p">,</span> <span class="s2">&quot;Argyll and Bute&quot;</span><span class="p">,</span>
                              <span class="s2">&quot;Inverness Nairn Badenoch and Strathspey&quot;</span><span class="p">,</span> <span class="c1"># missing commas :(</span>
                              <span class="s2">&quot;Dumfries and Galloway&quot;</span><span class="p">]</span>

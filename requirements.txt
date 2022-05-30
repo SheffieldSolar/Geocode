@@ -2,6 +2,11 @@ numpy
 pandas>=1.0.0
 googlemaps
 requests
+cython>0.15.1
+cartopy
+pyproj>=2.6.0
+fiona
+rtree
 shapely>=1.7.0
 pyshp
-pyproj>=2.6.0
+geopandas
