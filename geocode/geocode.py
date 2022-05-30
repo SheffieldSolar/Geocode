@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 
 import os
 import sys
@@ -64,6 +64,7 @@ class Geocoder:
         """
         Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
         longitudes.
+
         Parameters
         ----------
         `progress_bar` : boolean
@@ -155,6 +156,7 @@ class Geocoder:
                     old_versions_only: bool = False) -> None:
         """
         Clear any cache files from the installation directory including from old versions.
+
         Parameters
         ----------
         delete_gmaps_cache : boolean
@@ -484,6 +486,7 @@ class Geocoder:
     def get_dno_regions(self):
         """
         Get the DNO License Area Boundaries from the ESO Data Portal.
+
         Returns
         -------
         `dno_regions` : dict
@@ -560,11 +563,13 @@ class Geocoder:
     def cpo_geocode(self, pcs: pd.DataFrame) -> pd.DataFrame:
         """
         Geocode multiple postcodes using Code Point Open.
+
         Parameters
         ----------
         `pcs` : Pandas.DataFrame
             A Pandas DataFrame containing the postcodes (or partial postcodes) to geocode. Must
             contain the column 'input_postcode'.
+
         Returns
         -------
         Pandas.DataFrame
@@ -596,10 +601,12 @@ class Geocoder:
         """
         Use the OS Code Point Open Database to geocode a postcode (or partial postcode using as much
         accuracy as the partial code permits).
+
         Parameters
         ----------
         `postcode` : string
             The postcode (or partial postcode) to geocode.
+
         Returns
         -------
         Pandas.Series
@@ -631,12 +638,14 @@ class Geocoder:
     def gmaps_geocode_one(self, postcode: str, address: Optional[str] = None) -> pd.Series:
         """
         Use the GMaps API to geocode a postcode (or partial postcode) and/or an address.
+
         Parameters
         ----------
         `postcode` : string
             The postcode (or partial postcode) to geocode.
         `address` : string
             The address to geocode.
+
         Returns
         -------
         Pandas.Series
@@ -680,6 +689,7 @@ class Geocoder:
                 addresses: Optional[Iterable[str]] = None) -> List[Tuple[float, float, int]]:
         """
         Geocode several postcodes and/or addresses.
+
         Parameters
         ----------
         `postcodes` : iterable of strings
@@ -689,6 +699,7 @@ class Geocoder:
             The addresses to geocode. Must align with *postcodes* if both are passed. If addresses
             are passed, the GMaps API will be used since OS Code Point Open does not provide address
             lookup.
+
         Returns
         -------
         list of tuples
@@ -696,6 +707,7 @@ class Geocoder:
             tuple containing: latitude (float), longitude (float), status code (int). The status
             code shows the quality of the postcode lookup - use the class attribute
             *self.status_codes* (a dict) to get a string representation.
+
         Notes
         -----
         The input iterables can be any Python object which can be interpreted by Pandas.DataFrame()
@@ -743,6 +755,7 @@ class Geocoder:
                     address: Optional[str] = None) -> Tuple[float, float, int]:
         """
         Geocode a single postcode and/or address.
+
         Parameters
         ----------
         `postcode` : string
@@ -750,12 +763,14 @@ class Geocoder:
         `address` : string
             The address to geocode. If address is passed, the GMaps API will be used since OS Code
             Point Open does not provide address lookup.
+
         Returns
         -------
         tuple
             A tuple containing: latitude (float), longitude (float), status code (int). The status
             code shows the quality of the postcode lookup - use the class attribute
             *self.status_codes* (a dict) to get a string representation.
+
         Notes
         -----
         If you pass only postcode, this method will priotiise OS Code Point Open as the geocoder.
@@ -774,16 +789,19 @@ class Geocoder:
                      ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
         """
         Geocode an LLSOA using the Population Weighted Centroid.
+
         Parameters
         ----------
         `llsoa` : string or iterable of strings
             The LLSOA(s) to geocode.
+
         Returns
         -------
         Tuple or List of Tuples
             If a single LLSOA was passed (i.e. a string), the output be a tuple containing: latitude
             (float), longitude (float). If several LLSOAs are passed (i.e. an iterable of strings),
             the output will be a list of tuples which aligns with the input iterable.
+
         Notes
         -----
         The input *llsoa* iterable can be any Python object which can be looped over with a for loop
@@ -809,6 +827,7 @@ class Geocoder:
                               datazones: bool = False) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to LLSOA.
+
         Parameters
         ----------
         `latlons` : list of tuples
@@ -816,6 +835,7 @@ class Geocoder:
         `datazones` : bool
             Set this to True to return Datazones rather than LLSOA codes in Scotland (default is
             False).
+
         Returns
         -------
         list of strings
@@ -841,6 +861,7 @@ class Geocoder:
                          regions: Dict) -> List:
         """
         Generic method to reverse-geocode x, y coordinates to regions.
+
         Parameters
         ----------
         `coords` : list of tuples
@@ -850,11 +871,13 @@ class Geocoder:
             (region_boundary, region_bounds). The region boundary must be a Shapely
             Polygon/MultiPolygon and the bounds should be a tuple containing (xmin, ymin, xmax,
             ymax).
+
         Returns
         -------
         list
             The region IDs that the input coords fall within. Any coords which do not fall inside an
             LLSOA boundary will return None.
+
         Notes
         -----
         The region bounds are used to improve performance by first scanning for potential region
@@ -892,10 +915,12 @@ class Geocoder:
         ----------
         `latlons` : list of tuples
             A list of tuples containing (latitude, longitude).
+
         Returns
         -------
         `results` : list of ints
             A list of tuples containing (<GSPs>, <GSPGroup>), aligned with the input *latlons*.
+
         Notes
         -----
         Return format needs some work, maybe switch to DataFrames in future release.
@@ -927,6 +952,7 @@ class Geocoder:
         ----------
         `latlons` : list of tuples
             A list of tuples containing (latitude, longitude).
+
         Returns
         -------
         `results` : list of ints
@@ -936,6 +962,7 @@ class Geocoder:
             within. The relationship between GSP: GNode is MANY:MANY, so each element of the outer
             list is another list of matches, each element of which is a dictionary giving the
             matched GSP / GNode.
+
         Notes
         -----
         Return format needs some work, maybe switch to DataFrames in future release.
@@ -954,7 +981,8 @@ class Geocoder:
         results = self._reverse_geocode(list(zip(northings, eastings)), self.gsp_regions_20181031)
         if self.gsp_lookup_20181031 is None:
             self.gsp_lookup_20181031 = self._load_gsp_lookup_20181031()
-        reg_lookup = {r: self.gsp_lookup_20181031[self.gsp_lookup_20181031.region_id == r].to_dict(orient='records')
+        lookup = self.gsp_lookup_20181031
+        reg_lookup = {r: lookup[lookup.region_id == r].to_dict(orient="records")
                       for r in list(set(results))}
         results_more = [reg_lookup[r] if r is not None else None for r in results]
         return results, results_more
@@ -971,10 +999,12 @@ class Geocoder:
                             ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
         """
         Geocode a UK Constituency using the geospatial centroid.
+
         Parameters
         ----------
         `constituency` : string or iterable of strings
             The constituency names to geocode.
+
         Returns
         -------
         tuple or list of tuples
@@ -982,6 +1012,7 @@ class Geocoder:
             containing: latitude (float), longitude (float). If several constituency names are
             passed (i.e. an iterable of strings), the output will be a list of tuples which aligns
             with the input iterable.
+
         Notes
         -----
         The input *constituency* iterable can be any Python object which can be looped over with a
@@ -1015,18 +1046,21 @@ class Geocoder:
         """
         Convert Eastings and Northings (a.k.a British National Grid a.k.a OSGB 1936) to latitudes
         and longitudes (WGS 1984).
+
         Parameters
         ----------
         `eastings` : iterable of floats or ints
             Easting co-ordinates.
         `northings` : iterable of floats or ints
             Northing co-ordinates.
+
         Returns
         -------
         `lons` : list of floats
             Corresponding longitude co-ordinates in WGS 1984 CRS.
         `lats` : list of floats
             Corresponding latitude co-ordinates in WGS 1984 CRS.
+
         Notes
         -----
         Be careful! This method uses the same convention of ordering (eastings, northings) and
@@ -1042,18 +1076,21 @@ class Geocoder:
         """
         Convert latitudes and longitudes (WGS 1984) to Eastings and Northings (a.k.a British
         National Grid a.k.a OSGB 1936).
+
         Parameters
         ----------
         `lons` : list of floats
             Corresponding longitude co-ordinates in WGS 1984 CRS.
         `lats` : list of floats
             Corresponding latitude co-ordinates in WGS 1984 CRS.
+
         Returns
         -------
         `eastings` : list of floats or ints
             Easting co-ordinates.
         `northings` : list of floats or ints
             Northing co-ordinates.
+
         Notes
         -----
         Be careful! This method uses the same convention of ordering (eastings, northings) and
@@ -1067,6 +1104,7 @@ class Geocoder:
 def print_progress(iteration, total, prefix="", suffix="", decimals=2, bar_length=100):
     """
     Call in a loop to create terminal progress bar.
+
     Parameters
     ----------
     `iteration` : int
@@ -1081,6 +1119,7 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=2, bar_lengt
         number of decimals in percent complete (optional)
     `bar_length` : int
         character length of bar (optional)
+
     Notes
     -----
     Taken from `Stack Overflow <http://stackoverflow.com/a/34325723>`_.
@@ -1097,6 +1136,7 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=2, bar_lengt
 def query_yes_no(question, default="yes"):
     """
     Ask a yes/no question via input() and return the answer as boolean.
+
     Parameters
     ----------
     `question` : string
@@ -1104,10 +1144,12 @@ def query_yes_no(question, default="yes"):
     `default` : string
         The presumed answer if the user just hits <Enter>. It must be "yes" (the default), "no" or
         None (meaning an answer is required of the user).
+
     Returns
     -------
     boolean
         Return value is True for "yes" or False for "no".
+
     Notes
     -----
     See http://stackoverflow.com/a/3041990

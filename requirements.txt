@@ -7,7 +7,6 @@ cartopy
 pyproj>=2.6.0
 fiona
 rtree
-pygeos
 shapely>=1.7.0
 pyshp
 geopandas
