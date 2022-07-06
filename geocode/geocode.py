@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 import os
 import sys
@@ -111,9 +111,11 @@ class Geocoder:
         self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
-                                                     "constituency_centroids.psv")
+                                                     "constituency_centroids_Dec2020.psv")
         self.constituency_cache_file = os.path.join(self.gov_dir,
                                                     f"constituency_centroids_{version_string}.p")
+        self.lad_lookup_file = os.path.join(self.gov_dir, "lad_centroids_May2021.psv")
+        self.lad_cache_file = os.path.join(self.gov_dir, f"lad_centroids_{version_string}.p")
         self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
                                   else os.path.join(self.gmaps_dir, "key.txt")
         self.gmaps_key = self._load_gmaps_key()
@@ -125,6 +127,7 @@ class Geocoder:
         self.gsp_lookup_20181031 = None
         self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
+        self.lad_lookup = None
         self.dz_lookup = None
         self.cpo = None
         self.gmaps = None
@@ -183,7 +186,8 @@ class Geocoder:
                       glob.glob(os.path.join(self.eso_dir, "dno_boundaries_*.p")) + \
                       glob.glob(os.path.join(self.eso_dir, "gsp_lookup_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p")) + \
-                      glob.glob(os.path.join(self.gov_dir, "constituency_centroids_*.p"))
+                      glob.glob(os.path.join(self.gov_dir, "constituency_centroids_*.p")) + \
+                      glob.glob(os.path.join(self.gov_dir, "lad_centroids_*.p"))
         for cache_file in cache_files:
             if old_versions_only and __version__.replace(".", "-") in cache_file:
                 continue
@@ -198,6 +202,7 @@ class Geocoder:
         self._load_llsoa_boundaries()
         self._load_datazone_lookup()
         self._load_constituency_lookup()
+        self._load_lad_lookup()
         self._load_dno_boundaries()
 
     def _load_gmaps_key(self):
@@ -559,6 +564,27 @@ class Geocoder:
         logging.info("Constituency lookup extracted and pickled to '%s'",
                      self.constituency_cache_file)
         return constituency_lookup
+
+    def _load_lad_lookup(self):
+        """Load a lookup of UK Local Authority District -> Geospatial Centroid."""
+        if os.path.isfile(self.lad_cache_file):
+            logging.debug("Loading Local Authority District lookup from cache ('%s')",
+                          self.lad_cache_file)
+            with open(self.lad_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        logging.info("Extracting the Local Authority District Centroids data (this only needs to "
+                     "be done once)")
+        lad_lookup = {}
+        with open(self.lad_lookup_file) as fid:
+            for line in fid:
+                _, name, longitude, latitude = line.strip().split("|")
+                match_str = name.strip().replace(" ", "").replace(",", "").lower()
+                lad_lookup[match_str] = (float(latitude), float(longitude))
+        with open(self.lad_cache_file, "wb") as pickle_fid:
+            pickle.dump(lad_lookup, pickle_fid)
+        logging.info("Local Authority District lookup extracted and pickled to '%s'",
+                     self.lad_cache_file)
+        return lad_lookup
 
     def cpo_geocode(self, pcs: pd.DataFrame) -> pd.DataFrame:
         """
@@ -1038,6 +1064,52 @@ class Geocoder:
         except KeyError:
             return None, None
 
+    def geocode_local_authority(self,
+                                local_authority: Union[str, Iterable[str]]
+                               ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
+        """
+        Geocode a UK Local Authority using the geospatial centroid.
+
+        Parameters
+        ----------
+        `local_authority` : string or iterable of strings
+            The Local Authority names to geocode.
+
+        Returns
+        -------
+        tuple or list of tuples
+            If a single Local Authority name was passed (i.e. a string), the output be a tuple
+            containing: latitude (float), longitude (float). If several Local Authority names are
+            passed (i.e. an iterable of strings), the output will be a list of tuples which aligns
+            with the input iterable.
+
+        Notes
+        -----
+        The input *local_authority* iterable can be any Python object which can be looped over with
+        a for loop e.g. a list, tuple, Numpy array etc.
+        Local Authorities are identified by their full name, case-insensitive, ignoring spaces.
+        """
+        if self.lad_lookup is None:
+            self.lad_lookup = self._load_lad_lookup()
+        if isinstance(local_authority, str):
+            return self._lad_centroid(local_authority)
+        results = []
+        tot = len(local_authority)
+        for i, local_authority_ in enumerate(local_authority):
+            results.append(self._lad_centroid(local_authority_))
+            if self.progress_bar and (i % 10 == 0 or i == tot - 1):
+                print_progress(i+1, tot, prefix=self.prefix+"[Geocode]     LOCAL AUTHORITY",
+                               suffix="", decimals=2, bar_length=100)
+        return results
+
+    def _lad_centroid(self, local_authority):
+        """Lookup the GC for a given Local Authority."""
+        try:
+            match_str = local_authority.strip().replace(" ", "").replace(",", "").lower()
+            return self.lad_lookup[match_str]
+        except KeyError:
+            return None, None
+
     @staticmethod
     def _bng2latlon(eastings: Iterable[Union[float, int]],
                     northings: Iterable[Union[float, int]]) -> Tuple[List[float], List[float]]:
@@ -1237,6 +1309,14 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
         logging.info("%s :    %s, %s", constituency, lat, lon)
+    sample_lads = ["Hartlepool", "Middlesbrough", "Redcar and Cleveland"]
+    timerstart = TIME.time()
+    logging.info("Geocoding some Local Authorities")
+    with Geocoder(progress_bar=False) as geocoder:
+        results = geocoder.geocode_local_authority(sample_lads)
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
+    for lad, (lat, lon) in zip(sample_lads, results):
+        logging.info("%s :    %s, %s", lad, lat, lon)
     sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
     with open(sample_file) as fid:
         postcodes = [line.strip() for line in fid if line.strip()][:10]

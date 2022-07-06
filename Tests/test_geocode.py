@@ -61,12 +61,25 @@ class geocodeTestCase(unittest.TestCase):
         constituencies = ["Banbury", "Cardiff Central",
                           "Inverclyde"]
         latlons = [
-            (51.9910766, -1.286259136),
-            (51.5047741, -3.163350737),
-            (55.90118449, -4.743636917),
+            (52.000099, -1.4026),
+            (51.505779, -3.16395),
+            (55.900299, -4.75387),
         ]
         with Geocoder(progress_bar=False) as geo:
             assert_almost_equal(geo.geocode_constituency(constituencies), latlons)
+
+    def test_geocode_local_authority(self):
+        """
+        Test the `geocode_local_authority()` function with several test cases.
+        """
+        lads = ["Blackpool", "Armagh City, Banbridge and Craigavon", "Bristol, City of"]
+        latlons = [
+            (53.82164, -3.0219901),
+            (54.3867, -6.4345498),
+            (51.471149, -2.57742),
+        ]
+        with Geocoder(progress_bar=False) as geo:
+            assert_almost_equal(geo.geocode_local_authority(lads), latlons)
 
     # def test_reverse_geocode_gsp(self):
         # """

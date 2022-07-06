@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Modules &mdash; Geocode 0.10.1 documentation</title>
+  <title>Modules &mdash; Geocode 0.10.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -229,6 +229,30 @@ the output will be a list of tuples which aligns with the input iterable.</p>
 e.g. a list, tuple, Numpy array etc.
 LLSOAs are identified by their LLSOA Code, sometimes abbreviated to <cite>llsoacd</cite>.
 In Scotland, one can use either LLSOA codes or Datazones, this method supports both.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="geocode.Geocoder.geocode_local_authority">
+<span class="sig-name descname"><span class="pre">geocode_local_authority</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_authority</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/geocode.html#Geocoder.geocode_local_authority"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#geocode.Geocoder.geocode_local_authority" title="Permalink to this definition"></a></dt>
+<dd><p>Geocode a UK Local Authority using the geospatial centroid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>local_authority</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The Local Authority names to geocode.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>If a single Local Authority name was passed (i.e. a string), the output be a tuple
+containing: latitude (float), longitude (float). If several Local Authority names are
+passed (i.e. an iterable of strings), the output will be a list of tuples which aligns
+with the input iterable.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple or list of tuples</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The input <em>local_authority</em> iterable can be any Python object which can be looped over with
+a for loop e.g. a list, tuple, Numpy array etc.
+Local Authorities are identified by their full name, case-insensitive, ignoring spaces.</p>
 </dd></dl>
 
 <dl class="py method">

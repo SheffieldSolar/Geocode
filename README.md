@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP.
 
-*Latest Version: 0.10.1*
+*Latest Version: 0.10.2*
 
 ## What is this repository for?
 
