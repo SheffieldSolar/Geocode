@@ -33,4 +33,8 @@ COPY requirements.txt /geocode/requirements.txt
 
 RUN pip install -U pip && pip install --no-cache-dir -r /geocode/requirements.txt > /dev/null
 
+COPY requirements_dev.txt /geocode/requirements_dev.txt
+
+RUN pip install --no-cache-dir -r /geocode/requirements_dev.txt > /dev/null
+
 CMD ["bash"]

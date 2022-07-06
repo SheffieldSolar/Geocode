@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Load a list of lat/lons from a CSV file and reverse-geocode them to GSP / GNode.
+Load a list of lat/lons from a CSV file and reverse-geocode them to GSP.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
 - First Authored: 2020-05-29
@@ -43,16 +43,12 @@ def main():
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
     with Geocoder(progress_bar=True) as geo:
-        region_ids, extra = geo.reverse_geocode_gsp(df[["latitude", "longitude"]].to_numpy())
+        region_ids = geo.reverse_geocode_gsp(df[["latitude", "longitude"]].to_numpy())
     # Following code is a bit clunky and performance needs improving
     output = []
     for i, row in df.iterrows():
-        if extra[i] is not None:
-            for l in extra[i]: # There might be more than one match e.g. where GSP:GNODE is ONE:MANY
-                output.append(row.tolist() + list(l.values()))
-        else:
-            output.append(row.tolist() + [None] * len(list(l.values())))
-    columns = row.index.to_list() + list(l.keys())
+        output.append(row.tolist() + list(region_ids[i]))
+    columns = row.index.to_list() + ["GSPs", "GSPGroup"]
     output = pd.DataFrame(output, columns=columns)
     output.to_csv(options.outfile, index=False)
     print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")

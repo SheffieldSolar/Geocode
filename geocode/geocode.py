@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 
 import os
 import sys
@@ -116,6 +116,7 @@ class Geocoder:
                                                     f"constituency_centroids_{version_string}.p")
         self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
                                   else os.path.join(self.gmaps_dir, "key.txt")
+        self.gmaps_key = self._load_gmaps_key()
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.gsp_regions = None
@@ -126,7 +127,6 @@ class Geocoder:
         self.constituency_lookup = None
         self.dz_lookup = None
         self.cpo = None
-        self.gmaps_key = None
         self.gmaps = None
         self.gmaps_cache = None
         self.timer = TIME.time()
@@ -206,8 +206,8 @@ class Geocoder:
             with open(self.gmaps_key_file) as fid:
                 key = fid.read().strip()
         except FileNotFoundError:
-            logging.warning("Failed to load Google Maps API key from '{self.gmaps_key_file}' - you "
-                            "will not be able to make new queries to the Google Maps API!")
+            logging.warning("Failed to load Google Maps API key from '%s' - you will not be able "
+                            "to make new queries to the Google Maps API!", self.gmaps_key_file)
             return None
         return key
 
@@ -655,10 +655,6 @@ class Geocoder:
         """
         if postcode is None and address is None:
             raise GenericException("You must pass either postcode or address, or both.")
-        if self.gmaps_key is None:
-            self.gmaps_key = self._load_gmaps_key()
-            if self.gmaps_key is not None:
-                self.gmaps = googlemaps.Client(key=self.gmaps_key)
         if self.gmaps_cache is None:
             self.gmaps_cache = self._load_gmaps_cache()
         sep = ", " if address and postcode else ""
@@ -671,6 +667,8 @@ class Geocoder:
         else:
             if self.gmaps_key is None:
                 return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+            if self.gmaps is None:
+                self.gmaps = googlemaps.Client(key=self.gmaps_key)
             geocode_result = self.gmaps.geocode(search_term, region="uk")
             self.gmaps_cache[search_term] = geocode_result
         if not geocode_result or len(geocode_result) > 1:
