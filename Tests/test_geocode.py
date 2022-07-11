@@ -11,6 +11,8 @@ Jamie Taylor 2020-05-22
 
 import unittest
 from numpy.testing import assert_almost_equal
+import pandas as pd
+from pandas.testing import assert_frame_equal
 
 from geocode import Geocoder
 
@@ -80,6 +82,19 @@ class geocodeTestCase(unittest.TestCase):
         ]
         with Geocoder(progress_bar=False) as geo:
             assert_almost_equal(geo.geocode_local_authority(lads), latlons)
+
+    def test_postcode2llsoa(self):
+        """
+        Test the `postcode2llsoa()` function with several test cases.
+        """
+        postcodes = pd.DataFrame({"input_postcode": ["IP1 5HX", "NE25 8EA", "SK14 2SF", "UB4 9UA"]})
+        expected = pd.DataFrame({
+            "input_postcode": ["IP1 5HX", "NE25 8EA", "SK14 2SF", "UB4 9UA"],
+            "postcode": ["IP15HX", "NE258EA", "SK142SF", "UB49UA"],
+            "lsoa11cd": ["E01030028", "E01008520", "E01006028", "E01002545"],
+        })
+        with Geocoder(progress_bar=False) as geo:
+            assert_frame_equal(geo.postcode2llsoa(postcodes), expected)
 
     # def test_reverse_geocode_gsp(self):
         # """

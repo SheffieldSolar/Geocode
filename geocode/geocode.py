@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.10.2"
+__version__ = "0.10.3"
 
 import os
 import sys
@@ -109,6 +109,10 @@ class Geocoder:
         self.dz_lookup_cache_file = os.path.join(self.ons_dir,
                                                  f"datazone_lookup_{version_string}.p")
         self.nrs_zipfile = os.path.join(self.ons_dir, "nrs.zip")
+        self.pc_llsoa_lookup_cache_file = os.path.join(self.ons_dir,
+                                                       f"pc_llsoa_lookup_{version_string}.p")
+        self.pc_llsoa_zipfile = os.path.join(self.ons_dir,
+                                             "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip")
         self.gov_dir = os.path.join(SCRIPT_DIR, "gov")
         self.constituency_lookup_file = os.path.join(self.gov_dir,
                                                      "constituency_centroids_Dec2020.psv")
@@ -128,6 +132,7 @@ class Geocoder:
         self.llsoa_reverse_lookup = None
         self.constituency_lookup = None
         self.lad_lookup = None
+        self.pc_llsoa_lookup = None
         self.dz_lookup = None
         self.cpo = None
         self.gmaps = None
@@ -186,6 +191,7 @@ class Geocoder:
                       glob.glob(os.path.join(self.eso_dir, "dno_boundaries_*.p")) + \
                       glob.glob(os.path.join(self.eso_dir, "gsp_lookup_*.p")) + \
                       glob.glob(os.path.join(self.ons_dir, "datazone_lookup_*.p")) + \
+                      glob.glob(os.path.join(self.ons_dir, "pc_llsoa_lookup_*.p")) + \
                       glob.glob(os.path.join(self.gov_dir, "constituency_centroids_*.p")) + \
                       glob.glob(os.path.join(self.gov_dir, "lad_centroids_*.p"))
         for cache_file in cache_files:
@@ -201,6 +207,7 @@ class Geocoder:
         self._load_llsoa_lookup()
         self._load_llsoa_boundaries()
         self._load_datazone_lookup()
+        self._load_postcode_llsoa_lookup()
         self._load_constituency_lookup()
         self._load_lad_lookup()
         self._load_dno_boundaries()
@@ -544,6 +551,20 @@ class Geocoder:
             pickle.dump(dz_lookup, pickle_fid)
         return dz_lookup
 
+    def _load_postcode_llsoa_lookup(self):
+        """Load a lookup of postcode <-> LLSOA."""
+        if os.path.isfile(self.pc_llsoa_lookup_cache_file):
+            logging.debug("Loading postcode<->LLSOA lookup from cache ('%s')",
+                          self.pc_llsoa_lookup_cache_file)
+            with open(self.pc_llsoa_lookup_cache_file, "rb") as pickle_fid:
+                return pickle.load(pickle_fid)
+        pc_llsoa_lookup = pd.read_csv(self.pc_llsoa_zipfile, dtype=str)
+        pc_llsoa_lookup["postcode"] = pc_llsoa_lookup.pcds.str.strip().str.upper()\
+                                                                      .str.replace(" ", "")
+        with open(self.pc_llsoa_lookup_cache_file, "wb") as pickle_fid:
+            pickle.dump(pc_llsoa_lookup, pickle_fid)
+        return pc_llsoa_lookup
+
     def _load_constituency_lookup(self):
         """Load a lookup of UK constituency -> Geospatial Centroid."""
         if os.path.isfile(self.constituency_cache_file):
@@ -879,6 +900,30 @@ class Geocoder:
             results = [llsoacd if llsoacd not in self.dz_lookup else self.dz_lookup[llsoacd]
                        for llsoacd in results]
         return results
+
+    def postcode2llsoa(self, pcs: pd.DataFrame) -> pd.DataFrame:
+        """
+        Reverse-geocode multiple postcodes to LLSOA.
+
+        Parameters
+        ----------
+        `pcs` : Pandas.DataFrame
+            A Pandas DataFrame containing the postcodes (or partial postcodes) to geocode. Must
+            contain the column 'input_postcode'.
+
+        Returns
+        -------
+        Pandas.DataFrame
+            A Pandas DataFrame with columns: input_postcode (str), lsoa11cd (str), plus any other
+            cols that were in `pcs`.
+        """
+        pcs["postcode_to_match"] = pcs.input_postcode.str.strip().str.upper().str.replace(" ", "")
+        if self.pc_llsoa_lookup is None:
+            self.pc_llsoa_lookup = self._load_postcode_llsoa_lookup()
+        pcs = pcs.merge(self.pc_llsoa_lookup[["postcode", "lsoa11cd"]], how="left",
+                        left_on="postcode_to_match", right_on="postcode")
+        pcs.drop(columns=["postcode_to_match"], inplace=True)
+        return pcs
 
     def _reverse_geocode(self,
                          coords: List[Tuple[float, float]],
@@ -1268,6 +1313,7 @@ def parse_options():
 def debug():
     """Useful for debugging code (runs each public method in turn with sample inputs)."""
     logging.info("Running some example code (`--debug`)")
+    ### LLSOA -> latlon ###
     timerstart = TIME.time()
     sample_llsoas = ["E01025397", "E01003065", "E01017548", "E01023301", "E01021142", "E01019037",
                      "E01013873", "S00092417", "S01012390"]
@@ -1277,6 +1323,7 @@ def debug():
     logging.info("Time taken: {:.1f} seconds".format(TIME.time() - timerstart))
     for llsoa, (lat, lon) in zip(sample_llsoas, results):
         logging.info("%s :    %s, %s", llsoa, lat, lon)
+    ### latlon -> LLSOA ###
     sample_latlons = [
         (53.705, -2.328), (51.430, -0.093), (52.088, -0.457), (51.706, -0.036), (50.882, 0.169),
         (50.409, -4.672), (52.940, -1.146), (57.060, -2.874), (56.31, -4.)
@@ -1288,6 +1335,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for (lat, lon), llsoa in zip(sample_latlons, results):
         logging.info("%s, %s :    %s", lat, lon, llsoa)
+    ### latlon -> GSP ###
     sample_file = os.path.join(SCRIPT_DIR, "sample_latlons.txt")
     with open(sample_file) as fid:
         sample_latlons = [tuple(map(float, line.strip().split(",")))
@@ -1299,6 +1347,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for (lat, lon), region_id in zip(sample_latlons, results):
         logging.info("%s, %s :    %s", lat, lon, region_id)
+    ### constituency -> latlon ###
     sample_constituencies = ["Berwickshire Roxburgh and Selkirk", "Argyll and Bute",
                              "Inverness Nairn Badenoch and Strathspey", # missing commas :(
                              "Dumfries and Galloway"]
@@ -1309,6 +1358,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
         logging.info("%s :    %s, %s", constituency, lat, lon)
+    ### Local Authority -> latlon ###
     sample_lads = ["Hartlepool", "Middlesbrough", "Redcar and Cleveland"]
     timerstart = TIME.time()
     logging.info("Geocoding some Local Authorities")
@@ -1317,6 +1367,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for lad, (lat, lon) in zip(sample_lads, results):
         logging.info("%s :    %s, %s", lad, lat, lon)
+    ### postcode/address -> latlon ###
     sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
     with open(sample_file) as fid:
         postcodes = [line.strip() for line in fid if line.strip()][:10]
@@ -1327,6 +1378,14 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for postcode, (lat, lon, status) in zip(postcodes, results):
         logging.info("%s :    %s, %s    -> %s", postcode, lat, lon, geocoder.status_codes[status])
+    ### postcode -> LLSOA ###
+    postcodes = pd.DataFrame({"input_postcode": ["S6 6RP", "DE22 2SZ", "S7 2QZ"]})
+    timerstart = TIME.time()
+    logging.info("Reverse geocoding some postcodes to LLSOA")
+    with Geocoder(progress_bar=False) as geocoder:
+        results = geocoder.postcode2llsoa(pcs=postcodes)
+    logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
+    logging.info("\n%s", results)
 
 def main():
     """Run the Command Line Interface."""
