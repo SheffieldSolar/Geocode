@@ -88,6 +88,7 @@ setup(
         "shapely",
         "pyshp",
         "pyproj",
+        "geopandas",
     ],
 
     # List additional groups of dependencies here (e.g. development
