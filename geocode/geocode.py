@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.10.3"
+__version__ = "0.10.4"
 
 import os
 import sys
@@ -202,7 +202,6 @@ class Geocoder:
 
     def force_setup(self):
         """Download all data and setup caches."""
-        self._load_gsp_boundaries_20220314()
         self._load_code_point_open(force_reload=False)
         self._load_llsoa_lookup()
         self._load_llsoa_boundaries()
@@ -210,6 +209,11 @@ class Geocoder:
         self._load_postcode_llsoa_lookup()
         self._load_constituency_lookup()
         self._load_lad_lookup()
+        self.force_setup_eso()
+
+    def force_setup_eso(self):
+        """Download all ESO data and setup caches."""
+        self._load_gsp_boundaries_20220314()
         self._load_dno_boundaries()
 
     def _load_gmaps_key(self):
@@ -1301,6 +1305,8 @@ def parse_options():
                         required=False, help="Force download all datasets to local cache (useful "
                                              "if running inside a Docker container i.e. run this "
                                              "as part of image build).")
+    parser.add_argument("--setup-eso", dest="setup_eso", action="store_true",
+                        required=False, help="Force download all ESO datasets to local cache.")
     parser.add_argument("--load-cpo-zip", dest="cpo_zip", action="store", type=str,
                         required=False, default=None, metavar="</path/to/zip-file>",
                         help="Load the Code Point Open data from a local zip file.")
@@ -1411,6 +1417,10 @@ def main():
         logging.info("Running forced setup")
         with Geocoder() as geocoder:
             geocoder.force_setup()
+    if options.setup_eso:
+        logging.info("Running forced setup of ESO data")
+        with Geocoder() as geocoder:
+            geocoder.force_setup_eso()
     if options.debug:
         debug()
 
