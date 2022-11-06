@@ -3,6 +3,7 @@
 Load a list of lat/lons from a CSV file and reverse-geocode them to LLSOA.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2020-04-16
 """
 
@@ -12,13 +13,14 @@ import argparse
 import time as TIME
 import pandas as pd
 
-from geocode import Geocoder, query_yes_no
+from geocode import Geocoder
+from utilities import query_yes_no, GenericException
 
 def parse_options():
     """Parse command line options."""
     parser = argparse.ArgumentParser(description=("This is a command line interface (CLI) for "
                                                   "the latlons2llsoa.py module"),
-                                     epilog="Jamie Taylor, 2020-04-16")
+                                     epilog="Jamie Taylor & Ethan Jones, 2020-04-16")
     parser.add_argument("-f", "--input-file", dest="infile", action="store", type=str,
                         required=True, metavar="</path/to/file>",
                         help="Specify a CSV file containing a list of latitudes and longitudes to "
@@ -30,7 +32,7 @@ def parse_options():
                         required=False, help="Specify to use Data Zones in Scotland.")
     options = parser.parse_args()
     if not os.path.isfile(options.infile):
-        raise Exception(f"The input file '{options.infile}' does not exist.")
+        raise GenericException(f"The input file '{options.infile}' does not exist.")
     if os.path.isfile(options.outfile):
         check = query_yes_no(f"The outfile '{options.outfile}' already exists, are you sure you "
                              "wish to overwrite?", "no")
@@ -44,8 +46,7 @@ def main():
     options = parse_options()
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
-    with Geocoder(progress_bar=True) as geo:
-        # import pdb; pdb.set_trace()
+    with Geocoder() as geo:
         df["llsoacd"] = geo.reverse_geocode_llsoa(df[["latitude", "longitude"]].to_numpy(),
                                                   options.datazones)
     df.to_csv(options.outfile, index=False)

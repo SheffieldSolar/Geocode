@@ -1,0 +1,134 @@
+import os
+import sys
+import logging
+import pickle
+
+import numpy as np
+import pandas as pd
+from typing import Optional, Iterable, Tuple, Union, List, Dict
+
+import utilities as utils
+
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+class GMaps:
+    """The Gmaps data manager for the Geocode class."""
+    def __init__(self, cache_manager, gmaps_key_file=None):
+        """The Gmaps data manager for the Geocode class."""
+        self.cache_manager = cache_manager
+        self.gmaps_key = None
+        self.gmaps_client = None
+        self.cache_file = "gmaps_cache"
+        self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
+                                  else os.path.join(self.cache_manager.cache_dir, "key.txt")
+        self._load_cache()
+        self._load_key()
+
+    def __enter__(self):
+        """Context manager."""
+        return self
+
+    def __exit__(self, *args):
+        """Context manager - flush GMaps cache on exit."""
+        self.flush_cache(self.cache, self.cache_file)
+
+    def _load_key(self):
+        """Load the user's GMaps API key from installation directory."""
+        try:
+            with open(self.gmaps_key_file) as fid:
+                key = fid.read().strip()
+        except FileNotFoundError:
+            logging.warning("Failed to load Google Maps API key from '{self.gmaps_key_file}' - you "
+                            "will not be able to make new queries to the Google Maps API!")
+            return None
+        return key
+
+    def flush_cache(self, gmaps_cache_contents):
+        """Flush any new GMaps API queries to the GMaps cache."""
+        self.cache_manager.write(self.cache_file, self.cache)
+
+    def geocode_postcode(self, postcode: [str],
+                         address: Optional[str] = None) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
+        """
+        Geocode several postcodes and/or addresses.
+
+        Parameters
+        ----------
+        `postcodes` : iterable of strings
+            The postcodes (or partial postcodes) to geocode. Must align with *addresses* if both are
+            passed.
+        `addresses` : iterable of strings
+            The addresses to geocode. Must align with *postcodes* if both are passed.
+
+        Returns
+        -------
+        tuple or list of tuples
+            If a single constituency name was passed (i.e. a string), the output be a tuple
+            containing: latitude (float), longitude (float). If several constituency names are
+            passed (i.e. an iterable of strings), the output will be a list of tuples which aligns
+            with the input iterable.
+        """
+        address = [None for a in address] if address is None else list(address)
+        logging.debug("Geocoding %s postcodes (%s addresses)", len(postcode), len(address))
+        results = []
+        for pc, addr in zip(postcode, address):
+            results.append(self.geocode_one(postcode=pc, address=addr))
+        return results
+
+    def geocode_one(self, postcode: str, address: Optional[str] = None) -> pd.Series:
+        """
+        Use the GMaps API to geocode a postcode (or partial postcode) and/or an address.
+
+        Parameters
+        ----------
+        `postcode` : string
+            The postcode (or partial postcode) to geocode.
+        `address` : string
+            The address to geocode.
+
+        Returns
+        -------
+        Pandas.Series
+            A Pandas Series with fields: input_postcode (str), latitude (float), longitude (float),
+            match_status (int). The status code shows the quality of the postcode lookup - use the
+            class attribute *self.status_codes* (a dict) to get a string representation.
+        """
+        if postcode is None and address is None:
+            raise utils.GenericException("You must pass either postcode or address, or both.")
+        if self.gmaps_key is None:
+            self.gmaps_key = self._load_key()
+            if self.gmaps_key is not None:
+                self.gmaps_client = googlemaps.Client(key=self.gmaps_key)
+        if self.cache is None:
+            self._load_cache()
+        sep = ", " if address and postcode else ""
+        postcode = postcode if postcode is not None else ""
+        address = address if address is not None else ""
+        search_term = f"{address}{sep}{postcode}"
+        logging.debug("Querying Google Maps Geocoder API for '%s'", search_term)
+        if search_term in self.cache:
+            geocode_result = self.cache[search_term]
+        else:
+            if self.gmaps_key is None:
+                return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+            geocode_result = self.gmaps_client.geocode(search_term, region="uk")
+            self.gmaps_cache[search_term] = geocode_result
+        if not geocode_result or len(geocode_result) > 1:
+            return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+        geometry = geocode_result[0]["geometry"]
+        ok_loc_types = ["ROOFTOP", "GEOMETRIC_CENTER"]
+        if geometry["location_type"] in ok_loc_types or \
+            geocode_result[0]["types"] == ["postal_code"]:
+            return pd.Series({"latitude": geometry["location"]["lat"],
+                              "longitude": geometry["location"]["lng"],
+                              "match_status": 3})
+        return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+
+    def _load_cache(self):
+        """Load the cache of prior addresses/postcodes for better performance."""
+        self.cache = self.cache_manager.retrieve(self.cache_file)
+        if self.cache is None:
+            self.cache = pd.DataFrame({"input_postcode": [], "input_address": [], "latitude": [],
+                                       "longitude": [], "match_status": []})
+        return
+

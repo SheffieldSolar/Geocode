@@ -8,7 +8,7 @@ def main():
         # Geocode some postcodes / addresses...
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
         addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
-        results = geocoder.geocode(postcodes, addresses)
+        results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
             print(f"Postcode: `{postcode}`    Address: `{address}`")
             if status == 0:
@@ -29,12 +29,10 @@ def main():
             print(f"    `{llsoa}`")
         # Reverse-geocode some lat/lons to GSP/GNode...
         latlons = [(53.384, -1.467), (53.388, -1.470)]
-        results, results_more = geocoder.reverse_geocode_gsp(latlons)
-        for (lat, lon), region_id, extra in zip(latlons, results, results_more):
+        results = geocoder.reverse_geocode_gsp(latlons)
+        for (lat, lon), region_id in zip(latlons, results):
             print(f"LATLON: {lat:.3f}, {lon:.3f}:")
             print(f"    {region_id}")
-            for e in extra:
-                print(f"        {e}")
         # Geocode some Constituencies...
         constituencies = ["Sheffield Central", "Sheffield Hallam"]
         results = geocoder.geocode_constituency(constituencies)

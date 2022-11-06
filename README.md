@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.10.0*
+*Latest Version: 0.11.0*
 
 ## What is this repository for?
 
@@ -72,6 +72,9 @@ All data required by this library is either packaged with the code or is downloa
 Within your Python code, I recommend using the context manager so that GMaps cache will be automatically flushed on exit. See `example.py`:
 
 ```Python
+import os
+import logging
+
 from geocode import Geocoder
 
 def main():
@@ -79,7 +82,7 @@ def main():
         # Geocode some postcodes / addresses...
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
         addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
-        results = geocoder.geocode(postcodes, addresses)
+        results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
             print(f"Postcode: `{postcode}`    Address: `{address}`")
             if status == 0:
@@ -100,12 +103,10 @@ def main():
             print(f"    `{llsoa}`")
         # Reverse-geocode some lat/lons to GSP/GNode...
         latlons = [(53.384, -1.467), (53.388, -1.470)]
-        results, results_more = geocoder.reverse_geocode_gsp(latlons)
-        for (lat, lon), region_id, extra in zip(latlons, results, results_more):
+        results = geocoder.reverse_geocode_gsp(latlons)
+        for (lat, lon), region_id in zip(latlons, results):
             print(f"LATLON: {lat:.3f}, {lon:.3f}:")
             print(f"    {region_id}")
-            for e in extra:
-                print(f"        {e}")
         # Geocode some Constituencies...
         constituencies = ["Sheffield Central", "Sheffield Hallam"]
         results = geocoder.geocode_constituency(constituencies)
@@ -114,6 +115,10 @@ def main():
             print(f"    {lat:.3f}, {lon:.3f}")
 
 if __name__ == "__main__":
+    log_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
+    fmt = os.environ.get("GEOCODE_LOGGING_FMT", log_fmt)
+    datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
+    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "DEBUG"))
     main()
 ```
 
@@ -152,8 +157,6 @@ Constituency: `Sheffield Central`
 Constituency: `Sheffield Hallam`
     53.382, -1.590
 ```
-
-It is also possible to avoid using the context manager, but if doing so you should manually call the `Geocoder.flush_gmaps_cache()` method when finished to take advantage of cached GMaps API queries.
 
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
 

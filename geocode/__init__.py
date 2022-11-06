@@ -1,8 +1,8 @@
 try:
     #py2
-    from geocode import Geocoder, query_yes_no
+    from geocode import Geocoder
 except:
     #py3+
-    from geocode.geocode import Geocoder, query_yes_no
+    from geocode.geocode import Geocoder
 
-__all__ = ["Geocoder", "query_yes_no"]
+__all__ = ["Geocoder"]

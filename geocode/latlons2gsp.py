@@ -3,6 +3,7 @@
 Load a list of lat/lons from a CSV file and reverse-geocode them to GSP / GNode.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2020-05-29
 """
 
@@ -12,13 +13,14 @@ import argparse
 import time as TIME
 import pandas as pd
 
-from geocode import Geocoder, query_yes_no
+from geocode import Geocoder
+from utilities import query_yes_no, GenericException
 
 def parse_options():
     """Parse command line options."""
     parser = argparse.ArgumentParser(description=("This is a command line interface (CLI) for "
                                                   "the latlons2gsp.py module"),
-                                     epilog="Jamie Taylor, 2020-05-29")
+                                     epilog="Jamie Taylor & Ethan Jones, 2020-05-29")
     parser.add_argument("-f", "--input-file", dest="infile", action="store", type=str,
                         required=True, metavar="</path/to/file>",
                         help="Specify a CSV file containing a list of latitudes and longitudes to "
@@ -28,7 +30,7 @@ def parse_options():
                         required=True, metavar="</path/to/file>", help="Specify an output file.")
     options = parser.parse_args()
     if not os.path.isfile(options.infile):
-        raise Exception(f"The input file '{options.infile}' does not exist.")
+        raise GenericException(f"The input file '{options.infile}' does not exist.")
     if os.path.isfile(options.outfile):
         check = query_yes_no(f"The outfile '{options.outfile}' already exists, are you sure you "
                              "wish to overwrite?", "no")
@@ -42,18 +44,11 @@ def main():
     options = parse_options()
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
-    with Geocoder(progress_bar=True) as geo:
-        region_ids, extra = geo.reverse_geocode_gsp(df[["latitude", "longitude"]].to_numpy())
-    # Following code is a bit clunky and performance needs improving
-    output = []
-    for i, row in df.iterrows():
-        if extra[i] is not None:
-            for l in extra[i]: # There might be more than one match e.g. where GSP:GNODE is ONE:MANY
-                output.append(row.tolist() + list(l.values()))
-        else:
-            output.append(row.tolist() + [None] * len(list(l.values())))
-    columns = row.index.to_list() + list(l.keys())
-    output = pd.DataFrame(output, columns=columns)
+    with Geocoder() as geo:
+        results_ = geo.reverse_geocode_gsp(df[["latitude", "longitude"]].to_numpy())
+    results_ = [(None, None) if gsp_pair is None else gsp_pair for gsp_pair in results_]
+    gsps, gsp_groups = [x[0] for x in results_], [x[1] for x in results_]
+    output = pd.DataFrame({'gsp': gsps, 'gsp_group': gsp_groups})
     output.to_csv(options.outfile, index=False)
     print(f"Finished, time taken: {TIME.time() - timerstart:.1f} seconds")
 
