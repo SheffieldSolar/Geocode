@@ -8,7 +8,7 @@ everything else.
 - First Authored: 2019-10-08
 """
 
-__version__ = "0.10.4"
+__version__ = "0.10.5"
 
 import os
 import sys
@@ -318,7 +318,8 @@ class Geocoder:
                 return pickle.load(pickle_fid)
         logging.info("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
                      "once)")
-        ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
+        # ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
+        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
         success, api_response = self._fetch_from_api(ons_url)
         if success:
             raw = json.loads(api_response.text)
@@ -370,7 +371,8 @@ class Geocoder:
                      "done once)")
         # ons_url = "https://opendata.arcgis.com/datasets/007577eeb8e34c62a1844df090a93128_0.geojson"
         # ons_url = "https://opendata.arcgis.com/datasets/f213065139e3441195803b4155e71e00_0.geojson"
-        ons_url = "https://opendata.arcgis.com/datasets/e0b761d78e51491d84a3df33dff044c7_0.geojson"
+        # ons_url = "https://opendata.arcgis.com/datasets/e0b761d78e51491d84a3df33dff044c7_0.geojson"
+        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
         # Loading NRS data from URL abandoned due to need for re-projection
         # nrs_url = "https://www.nrscotland.gov.uk/files/geography/output-area-2011-eor.zip"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"

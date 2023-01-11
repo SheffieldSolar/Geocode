@@ -22,7 +22,7 @@ copyright = '2022, Jamie Taylor'
 author = 'Jamie Taylor'
 
 # The full version, including alpha/beta/rc tags
-release = '0.10.4'
+release = '0.10.5'
 
 
 # -- General configuration ---------------------------------------------------

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Modules &mdash; Geocode 0.10.4 documentation</title>
+  <title>Modules &mdash; Geocode 0.10.5 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -16,6 +16,7 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -41,7 +42,28 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Welcome to Geocode’s documentation!</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Modules</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#geocode">geocode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#geocode">geocode</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#geocode.Geocoder"><code class="docutils literal notranslate"><span class="pre">Geocoder</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.clear_cache"><code class="docutils literal notranslate"><span class="pre">Geocoder.clear_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.cpo_geocode"><code class="docutils literal notranslate"><span class="pre">Geocoder.cpo_geocode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.cpo_geocode_one"><code class="docutils literal notranslate"><span class="pre">Geocoder.cpo_geocode_one()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.force_setup"><code class="docutils literal notranslate"><span class="pre">Geocoder.force_setup()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.force_setup_eso"><code class="docutils literal notranslate"><span class="pre">Geocoder.force_setup_eso()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.geocode"><code class="docutils literal notranslate"><span class="pre">Geocoder.geocode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.geocode_constituency"><code class="docutils literal notranslate"><span class="pre">Geocoder.geocode_constituency()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.geocode_llsoa"><code class="docutils literal notranslate"><span class="pre">Geocoder.geocode_llsoa()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.geocode_local_authority"><code class="docutils literal notranslate"><span class="pre">Geocoder.geocode_local_authority()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.geocode_one"><code class="docutils literal notranslate"><span class="pre">Geocoder.geocode_one()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.get_dno_regions"><code class="docutils literal notranslate"><span class="pre">Geocoder.get_dno_regions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.gmaps_geocode_one"><code class="docutils literal notranslate"><span class="pre">Geocoder.gmaps_geocode_one()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.postcode2llsoa"><code class="docutils literal notranslate"><span class="pre">Geocoder.postcode2llsoa()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.reverse_geocode_gsp"><code class="docutils literal notranslate"><span class="pre">Geocoder.reverse_geocode_gsp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.reverse_geocode_gsp_20181031"><code class="docutils literal notranslate"><span class="pre">Geocoder.reverse_geocode_gsp_20181031()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#geocode.Geocoder.reverse_geocode_llsoa"><code class="docutils literal notranslate"><span class="pre">Geocoder.reverse_geocode_llsoa()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -59,8 +81,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Modules</li>
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">Modules</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -165,9 +187,9 @@ class attribute <em>self.status_codes</em> (a dict) to get a string representati
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>postcodes</strong> (<em>iterable of strings</em>) – The postcodes (or partial postcodes) to geocode. Must align with <em>addresses</em> if both are
+<li><p><strong>postcodes</strong> (<em>iterable</em><em> of </em><em>strings</em>) – The postcodes (or partial postcodes) to geocode. Must align with <em>addresses</em> if both are
 passed.</p></li>
-<li><p><strong>addresses</strong> (<em>iterable of strings</em>) – The addresses to geocode. Must align with <em>postcodes</em> if both are passed. If addresses
+<li><p><strong>addresses</strong> (<em>iterable</em><em> of </em><em>strings</em>) – The addresses to geocode. Must align with <em>postcodes</em> if both are passed. If addresses
 are passed, the GMaps API will be used since OS Code Point Open does not provide address
 lookup.</p></li>
 </ul>
@@ -195,7 +217,7 @@ If a postcode fails to geocode using OS CPO, it will be geocoded with GMaps.</p>
 <dd><p>Geocode a UK Constituency using the geospatial centroid.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>constituency</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The constituency names to geocode.</p>
+<dd class="field-odd"><p><strong>constituency</strong> (<em>string</em><em> or </em><em>iterable</em><em> of </em><em>strings</em>) – The constituency names to geocode.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>If a single constituency name was passed (i.e. a string), the output be a tuple
@@ -219,7 +241,7 @@ Constituencies are identified by their full name, case-insensitive, ignoring spa
 <dd><p>Geocode an LLSOA using the Population Weighted Centroid.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>llsoa</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The LLSOA(s) to geocode.</p>
+<dd class="field-odd"><p><strong>llsoa</strong> (<em>string</em><em> or </em><em>iterable</em><em> of </em><em>strings</em>) – The LLSOA(s) to geocode.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>If a single LLSOA was passed (i.e. a string), the output be a tuple containing: latitude
@@ -243,7 +265,7 @@ In Scotland, one can use either LLSOA codes or Datazones, this method supports b
 <dd><p>Geocode a UK Local Authority using the geospatial centroid.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>local_authority</strong> (<em>string</em><em> or </em><em>iterable of strings</em>) – The Local Authority names to geocode.</p>
+<dd class="field-odd"><p><strong>local_authority</strong> (<em>string</em><em> or </em><em>iterable</em><em> of </em><em>strings</em>) – The Local Authority names to geocode.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>If a single Local Authority name was passed (i.e. a string), the output be a tuple
@@ -352,7 +374,7 @@ cols that were in <cite>pcs</cite>.</p>
 <dd><p>Reverse-geocode latitudes and longitudes to GSP using the 20220314 definitions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>latlons</strong> (<em>list of tuples</em>) – A list of tuples containing (latitude, longitude).</p>
+<dd class="field-odd"><p><strong>latlons</strong> (<em>list</em><em> of </em><em>tuples</em>) – A list of tuples containing (latitude, longitude).</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>`results`</strong> – A list of tuples containing (&lt;GSPs&gt;, &lt;GSPGroup&gt;), aligned with the input <em>latlons</em>.</p>
@@ -371,7 +393,7 @@ cols that were in <cite>pcs</cite>.</p>
 <dd><p>Reverse-geocode latitudes and longitudes to GSP using the 20181031 definitions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>latlons</strong> (<em>list of tuples</em>) – A list of tuples containing (latitude, longitude).</p>
+<dd class="field-odd"><p><strong>latlons</strong> (<em>list</em><em> of </em><em>tuples</em>) – A list of tuples containing (latitude, longitude).</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><ul class="simple">
@@ -395,7 +417,7 @@ matched GSP / GNode.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>latlons</strong> (<em>list of tuples</em>) – A list of tuples containing (latitude, longitude).</p></li>
+<li><p><strong>latlons</strong> (<em>list</em><em> of </em><em>tuples</em>) – A list of tuples containing (latitude, longitude).</p></li>
 <li><p><strong>datazones</strong> (<em>bool</em>) – Set this to True to return Datazones rather than LLSOA codes in Scotland (default is
 False).</p></li>
 </ul>
