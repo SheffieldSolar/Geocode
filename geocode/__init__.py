@@ -1,2 +1,2 @@
-from geocode.geocode import Geocoder
 from geocode import utilities
+from geocode.geocode import Geocoder
