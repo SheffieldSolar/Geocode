@@ -1,8 +1,15 @@
+"""
+Manage data from Google Maps.
+
+- Ethan Jones <ejones18@sheffield.ac.uk>
+- Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- First Authored: 2022-10-19
+"""
+
 import os
 import sys
 import logging
 import pickle
-
 import numpy as np
 import pandas as pd
 from typing import Optional, Iterable, Tuple, Union, List, Dict
@@ -22,7 +29,6 @@ class GMaps:
         self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
                                   else os.path.join(self.cache_manager.cache_dir, "key.txt")
         self._load_cache()
-        self._load_key()
 
     def __enter__(self):
         """Context manager."""
@@ -38,8 +44,9 @@ class GMaps:
             with open(self.gmaps_key_file) as fid:
                 key = fid.read().strip()
         except FileNotFoundError:
-            logging.warning("Failed to load Google Maps API key from '{self.gmaps_key_file}' - you "
-                            "will not be able to make new queries to the Google Maps API!")
+            logging.warning("Failed to load Google Maps API key from '%s' - you "
+                            "will not be able to make new queries to the Google Maps API!",
+                            self.gmaps_key_file)
             return None
         return key
 

@@ -1,6 +1,15 @@
+"""
+Utilities for the Geocode library.
+
+- Ethan Jones <ejones18@sheffield.ac.uk>
+- Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- First Authored: 2022-10-19
+"""
+
 import sys
 import logging
 import requests
+import json
 
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 import pyproj
@@ -249,6 +258,26 @@ def reverse_geocode(coords: List[Tuple[float, float]],
         if not success:
             results.append(None)
     return results
+
+def _fetch_from_ons_api(url):
+    """Download data from the ONS ARCGIS API which uses pagination."""
+    exceeded_transfer_limit = True
+    offset = 0
+    record_count = 2000
+    pages = []
+    while exceeded_transfer_limit:
+        url_ = f"{url}&resultOffset={offset}&resultRecordCount={record_count}"
+        success, api_response = fetch_from_api(url_)
+        if success:
+            page = json.loads(api_response.text)
+            exceeded_transfer_limit = "properties" in page and \
+                                      "exceededTransferLimit" in page["properties"] and \
+                                      page["properties"]["exceededTransferLimit"]
+            pages.append(page)
+            offset += record_count
+        else:
+            raise utils.GenericException("Encountered an error while extracting LLSOA data from ONS API.")
+    return pages
 
 def fetch_from_api(url):
     """Generic function to GET data from web API with retries."""

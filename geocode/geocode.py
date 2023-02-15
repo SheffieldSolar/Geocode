@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-A lightweight geocoder that uses OS Code Point Open where possible for postcodes and GMaps API for
-everything else.
+Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
 - Ethan Jones <ejones18@sheffield.ac.uk>
@@ -62,7 +61,7 @@ class Geocoder:
         self.cache_manager.clear(delete_gmaps_cache=False, old_versions_only=True)
         self.cpo = cpo.CodePointOpen(self.cache_manager)
         self.ngeso = ngeso.NationalGrid(self.cache_manager)
-        self.ons_nrs = ons_nrs.NationalStatistics(self.cache_manager)
+        self.ons_nrs = ons_nrs.ONS_NRS(self.cache_manager)
         self.gmaps = gmaps.GMaps(self.cache_manager, gmaps_key_file)
         self.status_codes = {
             0: "Failed",
@@ -194,10 +193,12 @@ class Geocoder:
 
         Parameters
         ----------
-        `entity` : string
-            Specify the entity type to Geocode from i.e., lad or postcode.
         `entity_ids` : iterable of strings
             The specific entities to Geocode.
+        `entity` : string
+            Specify the entity type to Geocode from i.e., lad or postcode.
+        `**kwargs`
+            Options to pass to the underlying geocode method.
         """
         entity = entity.lower()
         if entity == "gsp":
@@ -231,6 +232,8 @@ class Geocoder:
             A list of tuples containing (latitude, longitude).
         `entity` : string
             Specify the entity type to Geocode from i.e., gsp or llsoa.
+        `**kwargs`
+            Options to pass to the underlying reverse-geocode method.
         """
         entity = entity.lower()
         if entity == "gsp":
@@ -308,7 +311,8 @@ def parse_options():
     parser.add_argument("--setup", dest="setup", action="store", nargs="+", default=None,
                         required=False, help="Force download all datasets to local cache (useful "
                                              "if running inside a Docker container i.e. run this "
-                                             "as part of image build).")
+                                             "as part of image build). Possible values are "
+                                             "'ngeso', 'cpo', 'ons' or 'all'.")
     parser.add_argument("--load-cpo-zip", dest="cpo_zip", action="store", type=str,
                         required=False, default=None, metavar="</path/to/zip-file>",
                         help="Load the Code Point Open data from a local zip file.")
@@ -316,7 +320,14 @@ def parse_options():
                         required=False, default=None, metavar="<gmaps-api-key>",
                         help="Load a Google Maps API key.")
     options = parser.parse_args()
-    return options
+    def handle_options(options):
+        if options.setup is not None:
+            valid_options = ["ngeso", "cpo", "ons", "all"]
+            options.setup = list(map(str.lower, options.setup))
+            if any(s not in valid_options for s in options.setup):
+                raise ValueError(f"Invalid value for `--setup` - valid values are {valid_options}")
+        return options
+    return handle_options(options)
 
 def debug():
     """Useful for debugging code (runs each public method in turn with sample inputs)."""
@@ -394,10 +405,9 @@ def main():
             if geocoder.gmaps._load_key() == options.gmaps_key:
                 logging.info("GMaps key saved to '%s'", geocoder.gmaps.gmaps_key_file)
     if options.setup is not None:
-        setup = list(map(str.lower, options.setup))
-        ngeso_setup =  "ngeso" in setup or "all" in setup
-        cpo_setup = "cpo" in setup or "all" in setup
-        ons_setup = "ons" in setup or "all" in setup
+        ngeso_setup =  "ngeso" in options.setup or "all" in options.setup
+        cpo_setup = "cpo" in options.setup or "all" in options.setup
+        ons_setup = "ons" in options.setup or "all" in options.setup
         logging.info("Running forced setup")
         with Geocoder() as geocoder:
             geocoder.force_setup(ngeso_setup=ngeso_setup, cpo_setup=cpo_setup, ons_setup=ons_setup)
@@ -408,5 +418,5 @@ if __name__ == "__main__":
     DEFAULT_FMT = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
     FMT = os.environ.get("GEOCODE_LOGGING_FMT", DEFAULT_FMT)
     DATEFMT = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
-    logging.basicConfig(format=FMT, datefmt=DATEFMT, level=os.environ.get("LOGLEVEL", "DEBUG"))
+    logging.basicConfig(format=FMT, datefmt=DATEFMT, level=os.environ.get("LOGLEVEL", "INFO"))
     main()

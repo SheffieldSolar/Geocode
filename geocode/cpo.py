@@ -1,3 +1,11 @@
+"""
+Manage data from Ordnance Survey's Code Point Open dataset.
+
+- Ethan Jones <ejones18@sheffield.ac.uk>
+- Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- First Authored: 2022-10-19
+"""
+
 import os
 import sys
 import pickle

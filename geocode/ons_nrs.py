@@ -1,3 +1,11 @@
+"""
+Manage data from the Office for National Statistics (ONS) and National Records Scotland (NRS).
+
+- Ethan Jones <ejones18@sheffield.ac.uk>
+- Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- First Authored: 2022-10-19
+"""
+
 import os
 import sys
 import zipfile
@@ -21,24 +29,25 @@ import utilities as utils
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-class NationalStatistics:
-    """The NRS data manager for the Geocode class."""
+class ONS_NRS:
+    """
+    Manage data from the Office for National Statistics (ONS) and National Records Scotland (NRS).
+    """
     def __init__(self, cache_manager):
-        """The NRS data manager for the Geocode class."""
+        """
+        Manage data from the Office for National Statistics (ONS) and National Records Scotland
+        (NRS).
+        """
         self.cache_manager = cache_manager
-        self.llsoa_cache_file = "llsoa_centroids"
-        self.nrs_zipfile = os.path.join(SCRIPT_DIR, "ons", "nrs.zip")
-        self.llsoa_boundaries_cache_file = "llsoa_boundaries"
+        data_dir = os.path.join(SCRIPT_DIR, "ons")
+        self.nrs_zipfile = os.path.join(data_dir, "nrs.zip")
         self.dz_lookup_cache_file = "datazone_lookup"
-        self.constituency_lookup_file = os.path.join(SCRIPT_DIR, "ons", 
-                                                     "constituency_centroids_Dec2020.psv")
-        self.constituency_cache_file = os.path.join(SCRIPT_DIR, "ons", "constituency_centroids.psv")
-        self.lad_lookup_file = os.path.join(SCRIPT_DIR, "ons", 
-                                            "lad_centroids_May2021.psv")
+        self.constituency_lookup_file = os.path.join(data_dir, "constituency_centroids_Dec2020.psv")
+        self.constituency_cache_file = os.path.join(data_dir, "constituency_centroids.psv")
+        self.lad_lookup_file = os.path.join(data_dir, "lad_centroids_May2021.psv")
         self.lad_cache_file = "lad_centroids"
         self.pc_llsoa_lookup_cache_file = "pc_llsoa_lookup"
-        self.pc_llsoa_zipfile = os.path.join(SCRIPT_DIR, "ons", 
-                                             "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip")
+        self.pc_llsoa_zipfile = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip")
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.llsoa_reverse_lookup = None
@@ -60,21 +69,18 @@ class NationalStatistics:
 
     def _load_llsoa_lookup(self):
         """Load the lookup of LLSOA -> Population Weighted Centroid."""
-        llsoa_lookup_cache_contents = self.cache_manager.retrieve(self.llsoa_cache_file)
+        cache_label = "llsoa_centroids"
+        llsoa_lookup_cache_contents = self.cache_manager.retrieve(cache_label)
         if llsoa_lookup_cache_contents is not None:
-            logging.debug("Loading LLSOA lookup from cache ('%s')", self.llsoa_cache_file)
+            logging.debug("Loading LLSOA lookup from cache ('%s')", cache_label)
             return llsoa_lookup_cache_contents
         logging.info("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
                      "once)")
-        ons_url = "https://opendata.arcgis.com/datasets/b7c49538f0464f748dd7137247bbc41c_0.geojson"
-        success, api_response = utils.fetch_from_api(ons_url)
-        if success:
-            raw = json.loads(api_response.text)
-            engwales_lookup = {f["properties"]["lsoa11cd"]:
+        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
+        pages = utils._fetch_from_ons_api(ons_url)
+        engwales_lookup = {f["properties"]["lsoa11cd"]:
                                tuple(f["geometry"]["coordinates"][::-1])
-                               for f in raw["features"]}
-        else:
-            raise utils.GenericException("Encountered an error while extracting LLSOA data from ONS API.")
+                               for page in pages for f in page["features"]}
         codes, eastings, northings = [], [], []
         datazones, dzeastings, dznorthings = [], [], []
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
@@ -99,8 +105,8 @@ class NationalStatistics:
         scots_lookup = {code: (lat, lon) for code, lon, lat in zip(codes, lons, lats)}
         scots_dz_lookup = {dz: (lat, lon) for dz, lon, lat in zip(datazones, dzlons, dzlats)}
         llsoa_lookup = {**engwales_lookup, **scots_lookup, **scots_dz_lookup}
-        self.cache_manager.write(self.llsoa_cache_file, llsoa_lookup)
-        logging.info("LLSOA centroids extracted and pickled to '%s'", self.llsoa_cache_file)
+        self.cache_manager.write(cache_label, llsoa_lookup)
+        logging.info("LLSOA centroids extracted and pickled to file ('%s')", cache_label)
         return llsoa_lookup
 
     def _load_llsoa_boundaries(self):
@@ -108,23 +114,19 @@ class NationalStatistics:
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
         (England and Wales) and packaged data (Scotland).
         """
-        llsoa_boundaries_cache_contents = self.cache_manager.retrieve(self.llsoa_boundaries_cache_file)
+        cache_label = "llsoa_boundaries"
+        llsoa_boundaries_cache_contents = self.cache_manager.retrieve(cache_label)
         if llsoa_boundaries_cache_contents is not None:
-            logging.debug("Loading LLSOA boundaries from cache ('%s')",
-                         self.llsoa_boundaries_cache_file)
+            logging.debug("Loading LLSOA boundaries from cache ('%s')", cache_label)
             return llsoa_boundaries_cache_contents
         logging.info("Extracting the LLSOA boundary data from ONS and NRS (this only needs to be "
                      "done once)")
-        ons_url = "https://opendata.arcgis.com/datasets/e0b761d78e51491d84a3df33dff044c7_0.geojson"
+        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
         nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        success, api_response = utils.fetch_from_api(ons_url)
-        if success:
-            raw = json.loads(api_response.text)
-            engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
-                                for f in raw["features"]}
-        else:
-            raise utils.GenericException("Encountered an error while extracting LLSOA data from ONS API.")
+        pages = utils._fetch_from_ons_api(ons_url)
+        engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
+                            for page in pages for f in page["features"]}
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
             with nrs_zip.open(nrs_shp_file, "r") as shp:
                 with nrs_zip.open(nrs_dbf_file, "r") as dbf:
@@ -134,9 +136,8 @@ class NationalStatistics:
         llsoa_regions = {**engwales_regions, **scots_regions}
         llsoa_regions = {llsoacd: (llsoa_regions[llsoacd], llsoa_regions[llsoacd].bounds)
                          for llsoacd in llsoa_regions}
-        self.cache_manager.write(self.llsoa_boundaries_cache_file, llsoa_regions)
-        logging.info("LSOA boundaries extracted and pickled to '%s'",
-                     self.llsoa_boundaries_cache_file)
+        self.cache_manager.write(cache_label, llsoa_regions)
+        logging.info("LSOA boundaries extracted and pickled to file ('%s')", cache_label)
         return llsoa_regions
 
     def _load_datazone_lookup(self):
@@ -236,7 +237,6 @@ class NationalStatistics:
                                    "https://github.com/SheffieldSolar/Geocode")
         if self.llsoa_regions is None:
             self.llsoa_regions = self._load_llsoa_boundaries()
-        #import pdb; pdb.set_trace()
         results = utils.reverse_geocode(latlons, self.llsoa_regions)
         if datazones:
             if self.dz_lookup is None:
@@ -276,7 +276,6 @@ class NationalStatistics:
             return self._constituency_centroid(constituency)
         results = []
         for constituency_ in constituency:
-            #import pdb; pdb.set_trace()
             results.append(self._constituency_centroid(constituency_))
         return results
 
@@ -378,7 +377,6 @@ class NationalStatistics:
     def _constituency_centroid(self, constituency):
         """Lookup the GC for a given constituency."""
         try:
-            #import pdb; pdb.set_trace()
             match_str = constituency.strip().replace(" ", "").replace(",", "").lower()
             return self.constituency_lookup[match_str]
         except KeyError:

@@ -9,9 +9,11 @@ Unit tests for the Geocode library.
 Jamie Taylor & Ethan Jones 2020-05-22
 """
 
+import sys
 import unittest
 from numpy.testing import assert_almost_equal, assert_equal
 
+sys.path.append("../geocode/")
 from geocode import Geocoder
 
 class geocodeTestCase(unittest.TestCase):
