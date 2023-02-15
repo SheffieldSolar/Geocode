@@ -16,7 +16,7 @@ here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
-    long_description = f.read()
+    long_description = f.read().replace("\r", "")
 
 setup(
     name="geocode",
@@ -24,10 +24,11 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="0.10.5",
+    version="0.11.0",
 
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
 
     # The project's main homepage.
     url="https://github.com/SheffieldSolar/Geocode",
@@ -60,9 +61,10 @@ setup(
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
 
     # What does your project relate to?
@@ -85,10 +87,14 @@ setup(
         "pandas",
         "googlemaps",
         "requests",
-        "shapely",
+        "shapely>=1.7.0",
         "pyshp",
-        "pyproj",
-        "geopandas",
+        "pyproj>=2.6.0",
+        "cython>0.15.1",
+        "cartopy",
+        "fiona",
+        "rtree",
+        "geopandas"
     ],
 
     # List additional groups of dependencies here (e.g. development
@@ -96,7 +102,10 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        
+        "pylint",
+        "sphinx",
+        "numpydoc",
+        "sphinx_rtd_theme"
     },
 
     # If there are data files included in your packages that need to be
