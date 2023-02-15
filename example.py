@@ -8,7 +8,7 @@ def main():
         # Geocode some postcodes / addresses...
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
         addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
-        results = geocoder.geocode(postcodes, addresses)
+        results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
             print(f"Postcode: `{postcode}`    Address: `{address}`")
             if status == 0:

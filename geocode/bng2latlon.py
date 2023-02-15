@@ -3,6 +3,7 @@
 Load a list of lat/lons from a CSV file and reverse-geocode them to LLSOA.
 
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
+- Ethan Jones <ejones18@sheffield.ac.uk>
 - First Authored: 2020-04-16
 """
 
@@ -12,13 +13,14 @@ import argparse
 import time as TIME
 import pandas as pd
 
-from geocode import Geocoder, query_yes_no
+from geocode import Geocoder
+from utilities import query_yes_no, GenericException
 
 def parse_options():
     """Parse command line options."""
     parser = argparse.ArgumentParser(description=("This is a command line interface (CLI) for "
                                                   "the bng2latlon.py module"),
-                                     epilog="Jamie Taylor, 2020-06-12")
+                                     epilog="Jamie Taylor & Ethan Jones, 2020-06-12")
     parser.add_argument("-f", "--input-file", dest="infile", action="store", type=str,
                         required=True, metavar="</path/to/file>",
                         help="Specify a CSV file containing a list of eastings and northings to "
@@ -28,7 +30,7 @@ def parse_options():
                         required=True, metavar="</path/to/file>", help="Specify an output file.")
     options = parser.parse_args()
     if not os.path.isfile(options.infile):
-        raise Exception(f"The input file '{options.infile}' does not exist.")
+        raise GenericException(f"The input file '{options.infile}' does not exist.")
     if os.path.isfile(options.outfile):
         check = query_yes_no(f"The outfile '{options.outfile}' already exists, are you sure you "
                              "wish to overwrite?", "no")
@@ -42,7 +44,7 @@ def main():
     options = parse_options()
     with open(options.infile, "r") as fid:
         df = pd.read_csv(fid)
-    with Geocoder(progress_bar=True) as geo:
+    with Geocoder() as geo:
         lons, lats = geo._bng2latlon(df["eastings"].to_numpy(), df["northings"].to_numpy())
     df["latitude"] = lats
     df["longitude"] = lons

@@ -1,8 +1,8 @@
 # Geocode
 
-Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP.
+Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.10.5*
+*Latest Version: 0.11.0*
 
 ## What is this repository for?
 
@@ -10,7 +10,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 * Use ONS & NRS LLSOA Population Weighted Centroids to geocode Lower Layer Super Output Areas.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
 * Use GIS boundaries data from ONS and NRS to reverse-geocode lat/lon to LLSOA.
-* Use GIS data from National Grid ESO's data portal to reverse-geocode to GSP. 
+* Use GIS data from National Grid ESO's data portal to reverse-geocode to GSP / GNode. 
 
 ## Benefits
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
@@ -19,7 +19,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 
 ## How do I get set up?
 
-Developed and tested with Python 3.7, should work for 3.6+.
+Developed and tested with Python 3.9, should work for 3.7+.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
@@ -32,24 +32,25 @@ Check that the installation was successful by running the following command from
 This will print the helper for the limited command line interface which provides tools to help get set up and to clear the cache when needed:
 
 ```
-usage: geocode.py [-h] [--clear-cache] [--debug] [--setup] [--setup-eso]
+usage: geocode.py [-h] [--clear-cache] [--debug] [--setup SETUP [SETUP ...]]
                   [--load-cpo-zip </path/to/zip-file>] [--load-gmaps-key <gmaps-api-key>]
 
-This is a command line interface (CLI) for the Geocode module version 0.10.5.
+This is a command line interface (CLI) for the Geocode module version 0.11.0.
 
 optional arguments:
   -h, --help            show this help message and exit
   --clear-cache         Specify to delete the cache files.
   --debug               Geocode some sample postcodes/addresses/LLSOAs.
-  --setup               Force download all datasets to local cache (useful if running
-                        inside a Docker container i.e. run this as part of image build).
-  --setup-eso           Force download all ESO datasets to local cache.
+  --setup SETUP [SETUP ...]
+                        Force download all datasets to local cache (useful if running inside a
+                        Docker container i.e. run this as part of image build). Possible values
+                        are 'ngeso', 'cpo', 'ons' or 'all'.
   --load-cpo-zip </path/to/zip-file>
                         Load the Code Point Open data from a local zip file.
   --load-gmaps-key <gmaps-api-key>
                         Load a Google Maps API key.
 
-Jamie Taylor, 2019-10-08
+Jamie Taylor & Ethan Jones, 2019-10-08
 ```
 
 No additional set up is needed at this stage - the required datasets will be downloaded (or extracted from the packaged data) the first time you use the associated method. If you want to force the Geocode library to download/extract all data, you can run the following command:
@@ -73,6 +74,9 @@ All data required by this library is either packaged with the code or is downloa
 Within your Python code, I recommend using the context manager so that GMaps cache will be automatically flushed on exit. See `example.py`:
 
 ```Python
+import os
+import logging
+
 from geocode import Geocoder
 
 def main():
@@ -80,7 +84,7 @@ def main():
         # Geocode some postcodes / addresses...
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
         addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
-        results = geocoder.geocode(postcodes, addresses)
+        results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
             print(f"Postcode: `{postcode}`    Address: `{address}`")
             if status == 0:
@@ -99,7 +103,7 @@ def main():
         for llsoa, (lat, lon) in zip(results, latlons):
             print(f"LATLON: {lat:.3f}, {lon:.3f}:")
             print(f"    `{llsoa}`")
-        # Reverse-geocode some lat/lons to GSP...
+        # Reverse-geocode some lat/lons to GSP/GNode...
         latlons = [(53.384, -1.467), (53.388, -1.470)]
         results = geocoder.reverse_geocode_gsp(latlons)
         for (lat, lon), region_id in zip(latlons, results):
@@ -113,6 +117,10 @@ def main():
             print(f"    {lat:.3f}, {lon:.3f}")
 
 if __name__ == "__main__":
+    log_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
+    fmt = os.environ.get("GEOCODE_LOGGING_FMT", log_fmt)
+    datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
+    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "DEBUG"))
     main()
 ```
 
@@ -139,22 +147,22 @@ LATLON: 53.384, -1.467:
 LATLON: 53.388, -1.470:
     `E01033262`
 LATLON: 53.384, -1.467:
-    ('PITS_3', '_M')
+    179
+        {'ng_id': 310, 'ggd_id': 310, 'gnode_id': 310, 'gnode_name': 'PIT1', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
+        {'ng_id': 311, 'ggd_id': 311, 'gnode_id': 311, 'gnode_name': 'PIT2', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
 LATLON: 53.388, -1.470:
-    ('NEEP_3', '_M')
+    179
+        {'ng_id': 310, 'ggd_id': 310, 'gnode_id': 310, 'gnode_name': 'PIT1', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
+        {'ng_id': 311, 'ggd_id': 311, 'gnode_id': 311, 'gnode_name': 'PIT2', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
 Constituency: `Sheffield Central`
     53.376, -1.474
 Constituency: `Sheffield Hallam`
     53.382, -1.590
 ```
 
-It is also possible to avoid using the context manager, but if doing so you should manually call the `Geocoder.flush_gmaps_cache()` method when finished to take advantage of cached GMaps API queries.
-
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
 
-When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method will use the 20220314 GSP region definitions by default and return a list of tuples containing `[(GSPs, GSPGroup), (GSPs, GSPGroup), ...]`.
-
-An alternative method is preserved for reverse-geocoding to the 20181031 GSP region definitions: `reverse_geocode_gsp_20181031()`. This method takes identical inputs to the `reverse_geocode_gsp()` method but returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and support for the 20181031 GSP region definitions will likely be removed in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points/r/gsp_-_gnode_-_direct_connect_-_region_lookup) dataset on the ESO Data Portal).
+When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and will likely be refined in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points/r/gsp_-_gnode_-_direct_connect_-_region_lookup) dataset on the ESO Data Portal). In testing, the `reverse_geocode_gsp()` method was able to allocate ~1 million random lat/lons to the correct GSP in average wall-clock time of around 300 seconds.
 
 ### Command Line Utilities
 
@@ -184,7 +192,7 @@ Jamie Taylor, 2020-04-16
 
 #### latlons2gsp
 
-This utility can be used to load a CSV file containing latitudes and longitudes and to reverse-geocode them to GSPs.
+This utility can be used to load a CSV file containing latitudes and longitudes and to reverse-geocode them to GSPs/GNodes.
 
 ```
 >> latlons2gsp -h
@@ -339,7 +347,7 @@ The Geocode library makes use of the Westminster Parliamentary Constituencies (D
 
 ### NGESO Data Portal
 
-The Geocode library makes use of GSP GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points). By default, the `geocoder.reverse_geocode_gsp()` method will use the 20220314 region definitions. The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
+The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
 
 Supported by National Grid ESO Open Data
 
