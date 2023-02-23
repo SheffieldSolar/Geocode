@@ -30,12 +30,12 @@ except ImportError:
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-import utilities as utils
-import cpo
-import ngeso
-import ons_nrs
-import gmaps
-import cache_manager
+from utilities import GenericException
+from cpo import CodePointOpen
+from ngeso import NationalGrid
+from ons_nrs import ONS_NRS
+from gmaps import GMaps
+from cache_manager import CacheManager
 from version import __version__
 
 class Geocoder:
@@ -57,12 +57,12 @@ class Geocoder:
         `gmaps_key_file` : string
             Path to an API key file for Google Maps Geocode API.
         """
-        self.cache_manager = cache_manager.CacheManager(cache_dir)
+        self.cache_manager = CacheManager(cache_dir)
         self.cache_manager.clear(delete_gmaps_cache=False, old_versions_only=True)
-        self.cpo = cpo.CodePointOpen(self.cache_manager)
-        self.ngeso = ngeso.NationalGrid(self.cache_manager)
-        self.ons_nrs = ons_nrs.ONS_NRS(self.cache_manager)
-        self.gmaps = gmaps.GMaps(self.cache_manager, gmaps_key_file)
+        self.cpo = CodePointOpen(self.cache_manager)
+        self.ngeso = NationalGrid(self.cache_manager)
+        self.ons_nrs = ONS_NRS(self.cache_manager)
+        self.gmaps = GMaps(self.cache_manager, gmaps_key_file)
         self.status_codes = {
             0: "Failed",
             1: "Full match with Code Point Open",
@@ -202,7 +202,7 @@ class Geocoder:
         """
         entity = entity.lower()
         if entity == "gsp":
-            raise utils.GenericException(f"Entity '{entity}' is not supported.")
+            raise GenericException(f"Entity '{entity}' is not supported.")
         elif entity == "llsoa":
             return self.ons_nrs.geocode_llsoa(llsoa=entity_ids)
         elif entity == "constituency":
@@ -220,7 +220,7 @@ class Geocoder:
             else:
                 return self.gmaps.geocode_postcode(postcode=entity_ids, address=address)
         else:
-            raise utils.GenericException(f"Entity '{entity}' is not supported.")
+            raise GenericException(f"Entity '{entity}' is not supported.")
 
     def reverse_geocode(self, latlons, entity, **kwargs):
         """
@@ -242,7 +242,7 @@ class Geocoder:
             datazones = kwargs.get("datazones", False)
             return self.ons_nrs.reverse_geocode_llsoa(latlons=latlons, datazones=datazones)
         else:
-            raise utils.GenericException(f"Entity '{entity}' is not supported.")
+            raise GenericException(f"Entity '{entity}' is not supported.")
 
     @staticmethod
     def _latlon2bng(lons: List[float], lats: List[float]) -> Tuple[List[float], List[float]]:
