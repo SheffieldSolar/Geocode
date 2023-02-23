@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
-import utilities as utils
+from . utilities import GenericException, bng2latlon
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -46,7 +46,7 @@ class CodePointOpen:
             return
         logging.info("Extracting the Code Point Open data (this only needs to be done once)")
         if not zipfile.is_zipfile(self.cpo_zipfile):
-            raise utils.GenericException("Could not find the OS Code Point Open data: "
+            raise GenericException("Could not find the OS Code Point Open data: "
                                    f"'{self.cpo_zipfile}'")
         columns = ["Postcode", "Positional_quality_indicator", "Eastings", "Northings",
                    "Country_code", "NHS_regional_HA_code", "NHS_HA_code", "Admin_county_code",
@@ -66,8 +66,8 @@ class CodePointOpen:
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
-        lons, lats = utils.bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
-                                      cpo.loc[nn_indices, ("Northings")].to_numpy())
+        lons, lats = bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
+                                cpo.loc[nn_indices, ("Northings")].to_numpy())
         cpo.loc[nn_indices, "longitude"] = lons
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()

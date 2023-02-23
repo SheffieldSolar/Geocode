@@ -29,14 +29,15 @@ except ImportError:
     SHAPELY_AVAILABLE = False
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+# sys.path.append(SCRIPT_DIR)
 
-from utilities import GenericException
-from cpo import CodePointOpen
-from ngeso import NationalGrid
-from ons_nrs import ONS_NRS
-from gmaps import GMaps
-from cache_manager import CacheManager
-from version import __version__
+from . utilities import GenericException
+from . cpo import CodePointOpen
+from . ngeso import NationalGrid
+from . ons_nrs import ONS_NRS
+from . gmaps import GMaps
+from . cache_manager import CacheManager
+from . version import __version__
 
 class Geocoder:
     """

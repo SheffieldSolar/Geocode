@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
-import utilities as utils
+from . utilities import GenericException
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 

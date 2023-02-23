@@ -15,8 +15,7 @@ from typing import Any, Optional
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-import utilities as utils
-from version import __version__
+from . version import __version__
 
 class CacheManager:
     """Cache Python variables to files using Pickle."""
