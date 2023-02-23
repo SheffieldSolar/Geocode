@@ -23,7 +23,9 @@ Developed and tested with Python 3.9, should work for 3.7+.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
-Run `pip install git+https://github.com/SheffieldSolar/Geocode/`
+Run `pip install geocode-ss`
+
+or `pip install git+https://github.com/SheffieldSolar/Geocode/`
 
 Check that the installation was successful by running the following command from terminal / command-line:
 
