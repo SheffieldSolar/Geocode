@@ -19,7 +19,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="geocode",
+    name="geocode-ss",
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -28,9 +28,11 @@ setup(
 
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
 
     # The project's main homepage.
     url="https://github.com/SheffieldSolar/Geocode",
+    download_url="https://github.com/SheffieldSolar/Geocode/archive/refs/tags/0.11.1.tar.gz",
 
     # Author details
     author="Jamie Taylor",
