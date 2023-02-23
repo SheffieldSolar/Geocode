@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>geocode.geocode &mdash; Geocode 0.11.1 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> Geocode
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">Welcome to Geocode’s documentation!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Modules</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Geocode</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">geocode.geocode</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for geocode.geocode</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP.</span>
+
+<span class="sd">- Jamie Taylor &lt;jamie.taylor@sheffield.ac.uk&gt;</span>
+<span class="sd">- Ethan Jones &lt;ejones18@sheffield.ac.uk&gt;</span>
+<span class="sd">- First Authored: 2019-10-08</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">TIME</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copyfile</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">import</span> <span class="nn">pyproj</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">shape</span><span class="p">,</span> <span class="n">Point</span>
+    <span class="kn">from</span> <span class="nn">shapely.ops</span> <span class="kn">import</span> <span class="n">unary_union</span>
+    <span class="n">SHAPELY_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to import Shapely library - you will not be able to reverse-geocode! &quot;</span>
+                    <span class="s2">&quot;See notes in the README about installing Shapely on Windows machines.&quot;</span><span class="p">)</span>
+    <span class="n">SHAPELY_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">SCRIPT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="c1"># sys.path.append(SCRIPT_DIR)</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">utilities</span> <span class="kn">import</span> <span class="nn">GenericException</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">cpo</span> <span class="kn">import</span> <span class="nn">CodePointOpen</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">ngeso</span> <span class="kn">import</span> <span class="nn">NationalGrid</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">ons_nrs</span> <span class="kn">import</span> <span class="nn">ONS_NRS</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">gmaps</span> <span class="kn">import</span> <span class="nn">GMaps</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">cache_manager</span> <span class="kn">import</span> <span class="nn">CacheManager</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">version</span> <span class="kn">import</span> <span class="nn">__version__</span>
+
+<div class="viewcode-block" id="Geocoder"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder">[docs]</a><span class="k">class</span> <span class="nc">Geocoder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and</span>
+<span class="sd">    longitudes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">gmaps_key_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and</span>
+<span class="sd">        longitudes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `cache_dir` : string</span>
+<span class="sd">            Optionally specify a directory to use for caching.</span>
+<span class="sd">        `gmaps_key_file` : string</span>
+<span class="sd">            Path to an API key file for Google Maps Geocode API.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span> <span class="o">=</span> <span class="n">CacheManager</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span><span class="n">delete_gmaps_cache</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">old_versions_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cpo</span> <span class="o">=</span> <span class="n">CodePointOpen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span> <span class="o">=</span> <span class="n">NationalGrid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span> <span class="o">=</span> <span class="n">ONS_NRS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gmaps</span> <span class="o">=</span> <span class="n">GMaps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">,</span> <span class="n">gmaps_key_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status_codes</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;Failed&quot;</span><span class="p">,</span>
+            <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;Full match with Code Point Open&quot;</span><span class="p">,</span>
+            <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;Partial match with Code Point Open&quot;</span><span class="p">,</span>
+            <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;Full match with GMaps&quot;</span><span class="p">,</span>
+            <span class="mi">4</span><span class="p">:</span> <span class="s2">&quot;Partial match with GMaps&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Context manager.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Context manager.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Geocoder.force_setup"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.force_setup">[docs]</a>    <span class="k">def</span> <span class="nf">force_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ngeso_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download all data and setup caches.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ngeso_setup</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">cpo_setup</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ons_setup</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Geocoder.get_dno_regions"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.get_dno_regions">[docs]</a>    <span class="k">def</span> <span class="nf">get_dno_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the DNO License Area Boundaries from the ESO Data Portal.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `dno_regions` : dict</span>
+<span class="sd">            Dict whose keys are the region IDs and whose values are a tuple containing:</span>
+<span class="sd">            (region_boundary, region_bounds). The region boundary is a Shapely</span>
+<span class="sd">            Polygon/MultiPolygon and the bounds are a tuple containing (xmin, ymin, xmax, ymax).</span>
+<span class="sd">        `dno_names` : dict</span>
+<span class="sd">            Dict whose keys are the region IDs and whose values are a tuple containing:</span>
+<span class="sd">            (Name, LongName).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span><span class="o">.</span><span class="n">_load_dno_boundaries</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Geocoder.get_gsp_regions"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.get_gsp_regions">[docs]</a>    <span class="k">def</span> <span class="nf">get_gsp_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the 20220314 GSP / GNode boundaries from the ESO Data Portal API.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span><span class="o">.</span><span class="n">_load_gsp_boundaries_20220314</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Geocoder.get_llsoa_boundaries"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.get_llsoa_boundaries">[docs]</a>    <span class="k">def</span> <span class="nf">get_llsoa_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API</span>
+<span class="sd">        (England and Wales) and packaged data (Scotland).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">_load_llsoa_boundaries</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Geocoder.geocode_llsoa"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode_llsoa">[docs]</a>    <span class="k">def</span> <span class="nf">geocode_llsoa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">llsoa_boundaries</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to geocode a collection of llsoa boundaries into latlons.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `llsoa_boundaries` : iterable of strings</span>
+<span class="sd">            Specific llsoa boundaries to geocode to latlons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">llsoa_boundaries</span><span class="p">,</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.reverse_geocode_llsoa"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.reverse_geocode_llsoa">[docs]</a>    <span class="k">def</span> <span class="nf">reverse_geocode_llsoa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latlons</span><span class="p">,</span> <span class="n">dz</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to reverse geocode a collection of latlons into llsoa boundaries.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `latlons` : iterable of strings</span>
+<span class="sd">            Specific latlons to geocode to llsoa boundaries.</span>
+<span class="sd">        </span>
+<span class="sd">        `dz` : Boolean</span>
+<span class="sd">            Indication whether to consider datazones</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="p">,</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">,</span> <span class="n">datazones</span><span class="o">=</span><span class="n">dz</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.geocode_constituency"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode_constituency">[docs]</a>    <span class="k">def</span> <span class="nf">geocode_constituency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constituencies</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to geocode a collection of constituencies into latlons.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `constituencies` : iterable of strings</span>
+<span class="sd">            Specific constituencies to geocode to latlons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">constituencies</span><span class="p">,</span> <span class="s2">&quot;constituency&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.geocode_local_authority"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode_local_authority">[docs]</a>    <span class="k">def</span> <span class="nf">geocode_local_authority</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lads</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to geocode a collection of LADs (Local Authority Districts) into latlons.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `lads` : iterable of strings</span>
+<span class="sd">            Specific LADs to geocode to latlons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">lads</span><span class="p">,</span> <span class="s2">&quot;lad&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.reverse_geocode_gsp"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.reverse_geocode_gsp">[docs]</a>    <span class="k">def</span> <span class="nf">reverse_geocode_gsp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latlons</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to reverse geocode a collection of latlons into gsp regions.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `latlons` : iterable of strings</span>
+<span class="sd">            Specific latlons to geocode to gsp regions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="p">,</span> <span class="s2">&quot;gsp&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.geocode_postcode"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode_postcode">[docs]</a>    <span class="k">def</span> <span class="nf">geocode_postcode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">postcodes</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;cpo&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to geocode a collection of postcodes into latlons.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `postcodes` : iterable of strings</span>
+<span class="sd">            Specific postcodes to geocode to latlons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">postcodes</span><span class="p">,</span> <span class="s2">&quot;postcode&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.geocode"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode">[docs]</a>    <span class="k">def</span> <span class="nf">geocode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entity_ids</span><span class="p">,</span> <span class="n">entity</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Geocode a selection of GSP regions, llsoa boundaries, constituencies, LADs, postcodes or</span>
+<span class="sd">        addresses to latitudes and longitudes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `entity_ids` : iterable of strings</span>
+<span class="sd">            The specific entities to Geocode.</span>
+<span class="sd">        `entity` : string</span>
+<span class="sd">            Specify the entity type to Geocode from i.e., lad or postcode.</span>
+<span class="sd">        `**kwargs`</span>
+<span class="sd">            Options to pass to the underlying geocode method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entity</span> <span class="o">=</span> <span class="n">entity</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;gsp&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity &#39;</span><span class="si">{</span><span class="n">entity</span><span class="si">}</span><span class="s2">&#39; is not supported.&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">geocode_llsoa</span><span class="p">(</span><span class="n">llsoa</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;constituency&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">geocode_constituency</span><span class="p">(</span><span class="n">constituency</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;lad&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">geocode_local_authority</span><span class="p">(</span><span class="n">local_authority</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;postcode&quot;</span><span class="p">:</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="s2">&quot;cpo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">address</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;address&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;cpo&quot;</span><span class="p">,</span> <span class="s2">&quot;codepointopen&quot;</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">geocode_postcode</span><span class="p">(</span><span class="n">postcodes</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gmaps&quot;</span><span class="p">,</span> <span class="s2">&quot;googlemaps&quot;</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">geocode_postcode</span><span class="p">(</span><span class="n">postcode</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">geocode_postcode</span><span class="p">(</span><span class="n">postcode</span><span class="o">=</span><span class="n">entity_ids</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="n">address</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity &#39;</span><span class="si">{</span><span class="n">entity</span><span class="si">}</span><span class="s2">&#39; is not supported.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.reverse_geocode"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.reverse_geocode">[docs]</a>    <span class="k">def</span> <span class="nf">reverse_geocode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latlons</span><span class="p">,</span> <span class="n">entity</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reverse geocode a set of latitudes and longitudes to either GSP regions or llsoa boundaries.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `latlons` : list of tuples</span>
+<span class="sd">            A list of tuples containing (latitude, longitude).</span>
+<span class="sd">        `entity` : string</span>
+<span class="sd">            Specify the entity type to Geocode from i.e., gsp or llsoa.</span>
+<span class="sd">        `**kwargs`</span>
+<span class="sd">            Options to pass to the underlying reverse-geocode method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entity</span> <span class="o">=</span> <span class="n">entity</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;gsp&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span><span class="o">.</span><span class="n">reverse_geocode_gsp</span><span class="p">(</span><span class="n">latlons</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">:</span>
+            <span class="n">datazones</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;datazones&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">reverse_geocode_llsoa</span><span class="p">(</span><span class="n">latlons</span><span class="o">=</span><span class="n">latlons</span><span class="p">,</span> <span class="n">datazones</span><span class="o">=</span><span class="n">datazones</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity &#39;</span><span class="si">{</span><span class="n">entity</span><span class="si">}</span><span class="s2">&#39; is not supported.&quot;</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_latlon2bng</span><span class="p">(</span><span class="n">lons</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">lats</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert latitudes and longitudes (WGS 1984) to Eastings and Northings (a.k.a British</span>
+<span class="sd">        National Grid a.k.a OSGB 1936).</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `lons` : list of floats</span>
+<span class="sd">            Corresponding longitude co-ordinates in WGS 1984 CRS.</span>
+<span class="sd">        `lats` : list of floats</span>
+<span class="sd">            Corresponding latitude co-ordinates in WGS 1984 CRS.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `eastings` : list of floats or ints</span>
+<span class="sd">            Easting co-ordinates.</span>
+<span class="sd">        `northings` : list of floats or ints</span>
+<span class="sd">            Northing co-ordinates.</span>
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Be careful! This method uses the same convention of ordering (eastings, northings) and</span>
+<span class="sd">        (lons, lats) as pyproj i.e. (x, y). Elsewhere in this module the convention is typically</span>
+<span class="sd">        (lats, lons) due to personal preference.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">proj</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">,</span> <span class="mi">27700</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">eastings</span><span class="p">,</span> <span class="n">northings</span> <span class="o">=</span> <span class="n">proj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">lons</span><span class="p">,</span> <span class="n">lats</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">eastings</span><span class="p">,</span> <span class="n">northings</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_bng2latlon</span><span class="p">(</span><span class="n">eastings</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span>
+                    <span class="n">northings</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert Eastings and Northings (a.k.a British National Grid a.k.a OSGB 1936) to latitudes</span>
+<span class="sd">        and longitudes (WGS 1984).</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `eastings` : iterable of floats or ints</span>
+<span class="sd">            Easting co-ordinates.</span>
+<span class="sd">        `northings` : iterable of floats or ints</span>
+<span class="sd">            Northing co-ordinates.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `lons` : list of floats</span>
+<span class="sd">            Corresponding longitude co-ordinates in WGS 1984 CRS.</span>
+<span class="sd">        `lats` : list of floats</span>
+<span class="sd">            Corresponding latitude co-ordinates in WGS 1984 CRS.</span>
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Be careful! This method uses the same convention of ordering (eastings, northings) and</span>
+<span class="sd">        (lons, lats) as pyproj i.e. (x, y). Elsewhere in this module the convention is typically</span>
+<span class="sd">        (lats, lons) due to personal preference.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">proj</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Transformer</span><span class="o">.</span><span class="n">from_crs</span><span class="p">(</span><span class="mi">27700</span><span class="p">,</span> <span class="mi">4326</span><span class="p">,</span> <span class="n">always_xy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">lons</span><span class="p">,</span> <span class="n">lats</span> <span class="o">=</span> <span class="n">proj</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">eastings</span><span class="p">,</span> <span class="n">northings</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">lons</span><span class="p">,</span> <span class="n">lats</span></div>
+
+<span class="k">def</span> <span class="nf">parse_options</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse command line options.&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;This is a command line interface (CLI) for &quot;</span>
+                                                  <span class="sa">f</span><span class="s2">&quot;the Geocode module version </span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">),</span>
+                                     <span class="n">epilog</span><span class="o">=</span><span class="s2">&quot;Jamie Taylor &amp; Ethan Jones, 2019-10-08&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--clear-cache&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;clear_cache&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+                        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Specify to delete the cache files.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--debug&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+                        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Geocode some sample postcodes/addresses/LLSOAs.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--setup&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;setup&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Force download all datasets to local cache (useful &quot;</span>
+                                             <span class="s2">&quot;if running inside a Docker container i.e. run this &quot;</span>
+                                             <span class="s2">&quot;as part of image build). Possible values are &quot;</span>
+                                             <span class="s2">&quot;&#39;ngeso&#39;, &#39;cpo&#39;, &#39;ons&#39; or &#39;all&#39;.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--load-cpo-zip&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;cpo_zip&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;&lt;/path/to/zip-file&gt;&quot;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Load the Code Point Open data from a local zip file.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--load-gmaps-key&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;gmaps_key&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;&lt;gmaps-api-key&gt;&quot;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Load a Google Maps API key.&quot;</span><span class="p">)</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">handle_options</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">valid_options</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ngeso&quot;</span><span class="p">,</span> <span class="s2">&quot;cpo&quot;</span><span class="p">,</span> <span class="s2">&quot;ons&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span><span class="p">]</span>
+            <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_options</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid value for `--setup` - valid values are </span><span class="si">{</span><span class="n">valid_options</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">options</span>
+    <span class="k">return</span> <span class="n">handle_options</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">debug</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Useful for debugging code (runs each public method in turn with sample inputs).&quot;&quot;&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running some example code (`--debug`)&quot;</span><span class="p">)</span>
+    <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">sample_llsoas</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;E01025397&quot;</span><span class="p">,</span> <span class="s2">&quot;E01003065&quot;</span><span class="p">,</span> <span class="s2">&quot;E01017548&quot;</span><span class="p">,</span> <span class="s2">&quot;E01023301&quot;</span><span class="p">,</span> <span class="s2">&quot;E01021142&quot;</span><span class="p">,</span> <span class="s2">&quot;E01019037&quot;</span><span class="p">,</span>
+                     <span class="s2">&quot;E01013873&quot;</span><span class="p">,</span> <span class="s2">&quot;S00092417&quot;</span><span class="p">,</span> <span class="s2">&quot;S01012390&quot;</span><span class="p">]</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Geocoding some LSOAs&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">entity</span><span class="o">=</span><span class="s2">&quot;llsoa&quot;</span><span class="p">,</span> <span class="n">entity_ids</span><span class="o">=</span><span class="n">sample_llsoas</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">{:.1f}</span><span class="s2"> seconds&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">llsoa</span><span class="p">,</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_llsoas</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">llsoa</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+    <span class="n">sample_latlons</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="mf">53.705</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.328</span><span class="p">),</span> <span class="p">(</span><span class="mf">51.430</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.093</span><span class="p">),</span> <span class="p">(</span><span class="mf">52.088</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.457</span><span class="p">),</span> <span class="p">(</span><span class="mf">51.706</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.036</span><span class="p">),</span> <span class="p">(</span><span class="mf">50.882</span><span class="p">,</span> <span class="mf">0.169</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">50.409</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.672</span><span class="p">),</span> <span class="p">(</span><span class="mf">52.940</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.146</span><span class="p">),</span> <span class="p">(</span><span class="mf">57.060</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.874</span><span class="p">),</span> <span class="p">(</span><span class="mf">56.31</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reverse geocoding some latlons to LSOAs&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="o">=</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">entity</span><span class="o">=</span><span class="s2">&quot;llsoa&quot;</span><span class="p">,</span> <span class="n">datazones</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span> <span class="n">llsoa</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">llsoa</span><span class="p">)</span>
+    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SCRIPT_DIR</span><span class="p">,</span> <span class="s2">&quot;sample_latlons.txt&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">sample_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
+        <span class="n">sample_latlons</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)))</span>
+                          <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fid</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()][:</span><span class="mi">10</span><span class="p">]</span>
+    <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reverse geocoding some latlons to GSPs&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="o">=</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">entity</span><span class="o">=</span><span class="s2">&quot;gsp&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span> <span class="n">region_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">region_id</span><span class="p">)</span>
+    <span class="n">sample_constituencies</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Berwickshire Roxburgh and Selkirk&quot;</span><span class="p">,</span> <span class="s2">&quot;Argyll and Bute&quot;</span><span class="p">,</span>
+                             <span class="s2">&quot;Inverness Nairn Badenoch and Strathspey&quot;</span><span class="p">,</span>
+                             <span class="s2">&quot;Dumfries and Galloway&quot;</span><span class="p">]</span>
+    <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Geocoding some constituencies&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">entity</span><span class="o">=</span><span class="s2">&quot;constituency&quot;</span><span class="p">,</span> <span class="n">entity_ids</span><span class="o">=</span><span class="n">sample_constituencies</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">constituency</span><span class="p">,</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_constituencies</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">constituency</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SCRIPT_DIR</span><span class="p">,</span> <span class="s2">&quot;sample_postcodes.txt&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">sample_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
+        <span class="n">postcodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fid</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()][:</span><span class="mi">10</span><span class="p">]</span>
+    <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Geocoding some postcodes&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">geocode</span><span class="p">(</span><span class="n">entity</span><span class="o">=</span><span class="s2">&quot;postcode&quot;</span><span class="p">,</span> <span class="n">entity_ids</span><span class="o">=</span><span class="n">postcodes</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">postcode</span><span class="p">,</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">postcodes</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">    -&gt; </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">postcode</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">status_codes</span><span class="p">[</span><span class="n">status</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the Command Line Interface.&quot;&quot;&quot;</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">clear_cache</span><span class="p">:</span>
+        <span class="n">geocoder</span> <span class="o">=</span> <span class="n">Geocoder</span><span class="p">()</span>
+        <span class="n">geocoder</span><span class="o">.</span><span class="n">cache_manager</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">cpo_zip</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Updating Code Point Open data&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+            <span class="n">copyfile</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">cpo_zip</span><span class="p">,</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">cpo_zipfile</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Copied file &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">cpo_zip</span><span class="p">,</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">cpo_zipfile</span><span class="p">)</span>
+            <span class="n">geocoder</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="n">force_reload</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Finished updating Code Point Open data&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">gmaps_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading GMaps key&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">geocoder</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">gmaps_key_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
+                <span class="n">fid</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">gmaps_key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">_load_key</span><span class="p">()</span> <span class="o">==</span> <span class="n">options</span><span class="o">.</span><span class="n">gmaps_key</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;GMaps key saved to &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">geocoder</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">gmaps_key_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ngeso_setup</span> <span class="o">=</span>  <span class="s2">&quot;ngeso&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
+        <span class="n">cpo_setup</span> <span class="o">=</span> <span class="s2">&quot;cpo&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
+        <span class="n">ons_setup</span> <span class="o">=</span> <span class="s2">&quot;ons&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running forced setup&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
+            <span class="n">geocoder</span><span class="o">.</span><span class="n">force_setup</span><span class="p">(</span><span class="n">ngeso_setup</span><span class="o">=</span><span class="n">ngeso_setup</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="n">cpo_setup</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="n">ons_setup</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
+        <span class="n">debug</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">DEFAULT_FMT</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> [</span><span class="si">%(levelname)s</span><span class="s2">] [</span><span class="si">%(filename)s</span><span class="s2">:</span><span class="si">%(funcName)s</span><span class="s2">] - </span><span class="si">%(message)s</span><span class="s2">&quot;</span>
+    <span class="n">FMT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GEOCODE_LOGGING_FMT&quot;</span><span class="p">,</span> <span class="n">DEFAULT_FMT</span><span class="p">)</span>
+    <span class="n">DATEFMT</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GEOCODE_LOGGING_DATEFMT&quot;</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">T%H:%M:%SZ&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="n">FMT</span><span class="p">,</span> <span class="n">datefmt</span><span class="o">=</span><span class="n">DATEFMT</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;LOGLEVEL&quot;</span><span class="p">,</span> <span class="s2">&quot;INFO&quot;</span><span class="p">))</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Jamie Taylor.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

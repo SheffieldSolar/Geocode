@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.11.0*
+*Latest Version: 0.11.1*
 
 ## What is this repository for?
 
@@ -35,7 +35,7 @@ This will print the helper for the limited command line interface which provides
 usage: geocode.py [-h] [--clear-cache] [--debug] [--setup SETUP [SETUP ...]]
                   [--load-cpo-zip </path/to/zip-file>] [--load-gmaps-key <gmaps-api-key>]
 
-This is a command line interface (CLI) for the Geocode module version 0.11.0.
+This is a command line interface (CLI) for the Geocode module version 0.11.1.
 
 optional arguments:
   -h, --help            show this help message and exit

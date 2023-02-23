@@ -24,7 +24,7 @@ except ImportError:
                     "See notes in the README about installing Shapely on Windows machines.")
     SHAPELY_AVAILABLE = False
 
-import utilities as utils
+from . import utilities as utils
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
