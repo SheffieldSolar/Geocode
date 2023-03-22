@@ -106,3 +106,4 @@ venv.bak/
 # Project specific
 *.p
 geocode/google_maps/key.txt
+geocode/cache/key.txt

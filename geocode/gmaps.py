@@ -10,13 +10,16 @@ import os
 import sys
 import logging
 import pickle
+from pathlib import Path
+from typing import Optional, Iterable, Tuple, Union, List, Dict
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Iterable, Tuple, Union, List, Dict
+import googlemaps
 
 from . utilities import GenericException
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class GMaps:
     """The Gmaps data manager for the Geocode class."""
@@ -27,16 +30,17 @@ class GMaps:
         self.gmaps_client = None
         self.cache_file = "gmaps_cache"
         self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
-                                  else os.path.join(self.cache_manager.cache_dir, "key.txt")
+                                  else self.cache_manager.cache_dir.joinpath("key.txt")
         self._load_cache()
+        self.cache_modified = False
 
     def __enter__(self):
         """Context manager."""
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, type, value, traceback):
         """Context manager - flush GMaps cache on exit."""
-        self.flush_cache(self.cache, self.cache_file)
+        self.flush_cache()
 
     def _load_key(self):
         """Load the user's GMaps API key from installation directory."""
@@ -50,9 +54,10 @@ class GMaps:
             return None
         return key
 
-    def flush_cache(self, gmaps_cache_contents):
+    def flush_cache(self):
         """Flush any new GMaps API queries to the GMaps cache."""
-        self.cache_manager.write(self.cache_file, self.cache)
+        if self.cache_modified:
+            self.cache_manager.write(self.cache_file, self.cache)
 
     def geocode_postcode(self, postcode: [str],
                          address: Optional[str] = None) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
@@ -112,14 +117,16 @@ class GMaps:
         postcode = postcode if postcode is not None else ""
         address = address if address is not None else ""
         search_term = f"{address}{sep}{postcode}"
-        logging.debug("Querying Google Maps Geocoder API for '%s'", search_term)
         if search_term in self.cache:
+            logging.debug("Loading GMaps Geocoder API result from cache: '%s'", search_term)
             geocode_result = self.cache[search_term]
         else:
+            logging.debug("Querying Google Maps Geocoder API for '%s'", search_term)
             if self.gmaps_key is None:
                 return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
             geocode_result = self.gmaps_client.geocode(search_term, region="uk")
-            self.gmaps_cache[search_term] = geocode_result
+            self.cache[search_term] = geocode_result
+            self.cache_modified = True
         if not geocode_result or len(geocode_result) > 1:
             return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
         geometry = geocode_result[0]["geometry"]
@@ -135,7 +142,6 @@ class GMaps:
         """Load the cache of prior addresses/postcodes for better performance."""
         self.cache = self.cache_manager.retrieve(self.cache_file)
         if self.cache is None:
-            self.cache = pd.DataFrame({"input_postcode": [], "input_address": [], "latitude": [],
-                                       "longitude": [], "match_status": []})
+            self.cache = {}
         return
 

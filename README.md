@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.11.1*
+*Latest Version: 0.12.0*
 
 ## What is this repository for?
 
@@ -10,7 +10,8 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 * Use ONS & NRS LLSOA Population Weighted Centroids to geocode Lower Layer Super Output Areas.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
 * Use GIS boundaries data from ONS and NRS to reverse-geocode lat/lon to LLSOA.
-* Use GIS data from National Grid ESO's data portal to reverse-geocode to GSP / GNode. 
+* Use GIS data from National Grid ESO's data portal to reverse-geocode to GSP / GNode.
+* Use GIS boudnaries from the Europa/Eurostats API to reverse-geocode to NUTS regions.
 
 ## Benefits
 * Prioritises Code Point Open for postcode lookup to save expensive GMaps API bills.
@@ -37,16 +38,16 @@ This will print the helper for the limited command line interface which provides
 usage: geocode.py [-h] [--clear-cache] [--debug] [--setup SETUP [SETUP ...]]
                   [--load-cpo-zip </path/to/zip-file>] [--load-gmaps-key <gmaps-api-key>]
 
-This is a command line interface (CLI) for the Geocode module version 0.11.1.
+This is a command line interface (CLI) for the Geocode module version 0.12.0.
 
 optional arguments:
   -h, --help            show this help message and exit
   --clear-cache         Specify to delete the cache files.
   --debug               Geocode some sample postcodes/addresses/LLSOAs.
   --setup SETUP [SETUP ...]
-                        Force download all datasets to local cache (useful if running inside a
-                        Docker container i.e. run this as part of image build). Possible values
-                        are 'ngeso', 'cpo', 'ons' or 'all'.
+                        Force download all datasets to local cache (useful if running
+                        inside a Docker container i.e. run this as part of image build).
+                        Possible values are 'ngeso', 'cpo', 'ons', 'eurostat' or 'all'.
   --load-cpo-zip </path/to/zip-file>
                         Load the Code Point Open data from a local zip file.
   --load-gmaps-key <gmaps-api-key>
@@ -84,82 +85,77 @@ from geocode import Geocoder
 def main():
     with Geocoder() as geocoder:
         # Geocode some postcodes / addresses...
+        print("GEOCODE POSTCODES / ADDRESSES:")
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
         addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
         results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
-            print(f"Postcode: `{postcode}`    Address: `{address}`")
-            if status == 0:
-                print("    Failed to geocode!")
-            else:
-                print(f"    {lat:.3f}, {lon:.3f}    ->  {geocoder.status_codes[status]}")
+            print(f"    Postcode + Address: `{postcode}` + `{address}`  ->  {lat:.3f}, {lon:.3f} "
+                  f"({geocoder.status_codes[status]})")
         # Geocode some LLSOAs...
+        print("GEOCODE LLSOAs:")
         llsoas = ["E01033264", "E01033262"]
         results = geocoder.geocode_llsoa(llsoas)
         for llsoa, (lat, lon) in zip(llsoas, results):
-            print(f"LLSOA: `{llsoa}`")
-            print(f"    {lat:.3f}, {lon:.3f}")
-        # Reverse-geocode some lat/lons to LLSOAs...
-        latlons = [(53.384, -1.467), (53.388, -1.470)]
-        results = geocoder.reverse_geocode_llsoa(latlons)
-        for llsoa, (lat, lon) in zip(results, latlons):
-            print(f"LATLON: {lat:.3f}, {lon:.3f}:")
-            print(f"    `{llsoa}`")
-        # Reverse-geocode some lat/lons to GSP/GNode...
-        latlons = [(53.384, -1.467), (53.388, -1.470)]
-        results = geocoder.reverse_geocode_gsp(latlons)
-        for (lat, lon), region_id in zip(latlons, results):
-            print(f"LATLON: {lat:.3f}, {lon:.3f}:")
-            print(f"    {region_id}")
+            print(f"    LLSOA: `{llsoa}`  ->  {lat:.3f}, {lon:.3f}")
         # Geocode some Constituencies...
+        print("GEOCODE CONSTITUENCIES:")
         constituencies = ["Sheffield Central", "Sheffield Hallam"]
         results = geocoder.geocode_constituency(constituencies)
         for constituency, (lat, lon) in zip(constituencies, results):
-            print(f"Constituency: `{constituency}`")
-            print(f"    {lat:.3f}, {lon:.3f}")
+            print(f"    Constituency: `{constituency}`  ->  {lat:.3f}, {lon:.3f}")
+        # Reverse-geocode some lat/lons to LLSOAs...
+        print("REVERSE-GEOCODE TO LLSOA:")
+        latlons = [(53.384, -1.467), (53.388, -1.470)]
+        results = geocoder.reverse_geocode_llsoa(latlons)
+        for llsoa, (lat, lon) in zip(results, latlons):
+            print(f"    LATLON: {lat:.3f}, {lon:.3f}  ->  `{llsoa}`")
+        # Reverse-geocode some lat/lons to GSP...
+        print("REVERSE-GEOCODE TO GSP:")
+        latlons = [(53.384, -1.467), (53.388, -1.470)]
+        results = geocoder.reverse_geocode_gsp(latlons)
+        for (lat, lon), region_id in zip(latlons, results):
+            print(f"    LATLON: {lat:.3f}, {lon:.3f}  ->  {region_id}")
+        # Reverse-geocode some lat/lons to 2021 NUTS2...
+        print("REVERSE-GEOCODE TO NUTS2:")
+        latlons = [(51.3259, -1.9613), (47.9995, 0.2335), (50.8356, 8.7343)]
+        results = geocoder.reverse_geocode_nuts(latlons, year=2021, level=2)
+        for (lat, lon), nuts2 in zip(latlons, results):
+            print(f"    LATLON: {lat:.3f}, {lon:.3f}  ->  {nuts2}")
 
 if __name__ == "__main__":
     log_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
     fmt = os.environ.get("GEOCODE_LOGGING_FMT", log_fmt)
     datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
-    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "DEBUG"))
+    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "WARNING"))
     main()
 ```
 
 ```
->> python geocode_example.py
-Postcode: `S3 7RH`    Address: `None`
-    53.381, -1.486    ->  Full match with Code Point Open
-Postcode: `S3 7`    Address: `None`
-    53.383, -1.481    ->  Partial match with Code Point Open
-Postcode: `S3`    Address: `None`
-    53.387, -1.474    ->  Partial match with Code Point Open
-Postcode: `None`    Address: `Hicks Building, Sheffield`
-    Failed to geocode!
-Postcode: `None`    Address: `Hicks`
-    Failed to geocode!
-Postcode: `S3 7RH`    Address: `Hicks Building`
-    Failed to geocode!
-LLSOA: `E01033264`
-    53.384, -1.467
-LLSOA: `E01033262`
-    53.388, -1.470
-LATLON: 53.384, -1.467:
-    `E01033264`
-LATLON: 53.388, -1.470:
-    `E01033262`
-LATLON: 53.384, -1.467:
-    179
-        {'ng_id': 310, 'ggd_id': 310, 'gnode_id': 310, 'gnode_name': 'PIT1', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
-        {'ng_id': 311, 'ggd_id': 311, 'gnode_id': 311, 'gnode_name': 'PIT2', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
-LATLON: 53.388, -1.470:
-    179
-        {'ng_id': 310, 'ggd_id': 310, 'gnode_id': 310, 'gnode_name': 'PIT1', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
-        {'ng_id': 311, 'ggd_id': 311, 'gnode_id': 311, 'gnode_name': 'PIT2', 'gnode_lat': 53.400459999999995, 'gnode_lon': -1.44215, 'gsp_id': 293, 'gsp_name': 'PITS_3', 'gsp_lat': 53.400459999999995, 'gsp_lon': -1.44215, 'dc_id': <NA>, 'dc_name': <NA>, 'dc_lat': <NA>, 'dc_lon': <NA>, 'region_id': 179, 'region_name': 'Pitsmoor', 'has_pv': 1, 'pes_id': 23, 'pes_name': '_M'}
-Constituency: `Sheffield Central`
-    53.376, -1.474
-Constituency: `Sheffield Hallam`
-    53.382, -1.590
+>> python example.py
+GEOCODE POSTCODES / ADDRESSES:
+    Postcode + Address: `S3 7RH` + `None`  ->  53.381, -1.486 (Full match with GMaps)
+    Postcode + Address: `S3 7` + `None`  ->  nan, nan (Failed)
+    Postcode + Address: `S3` + `None`  ->  nan, nan (Failed)
+    Postcode + Address: `None` + `Hicks Building, Sheffield`  ->  53.381, -1.486 (Full match with GMaps)
+    Postcode + Address: `None` + `Hicks`  ->  nan, nan (Failed)
+    Postcode + Address: `S3 7RH` + `Hicks Building`  ->  53.381, -1.486 (Full match with GMaps)
+GEOCODE LLSOAs:
+    LLSOA: `E01033264`  ->  53.384, -1.467
+    LLSOA: `E01033262`  ->  53.388, -1.470
+GEOCODE CONSTITUENCIES:
+    Constituency: `Sheffield Central`  ->  53.376, -1.464
+    Constituency: `Sheffield Hallam`  ->  53.396, -1.604
+REVERSE-GEOCODE TO LLSOA:
+    LATLON: 53.384, -1.467  ->  E01033264
+    LATLON: 53.388, -1.470  ->  E01033262
+REVERSE-GEOCODE TO GSP:
+    LATLON: 53.384, -1.467  ->  ('PITS_3', '_M')
+    LATLON: 53.388, -1.470  ->  ('NEEP_3', '_M')
+REVERSE-GEOCODE TO NUTS2:
+    LATLON: 51.326, -1.961  ->  UKK1
+    LATLON: 47.999, 0.234  ->  FRG0
+    LATLON: 50.836, 8.734  ->  DE72
 ```
 
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
@@ -360,3 +356,7 @@ To update your locally cached boundary definitions, clear your local cache:
 ```
 geocode --clear-cache
 ```
+
+### Eurostat
+
+The Geocode library makes use of the eurostat API to download boundaries for NUTS (Nomenclature of territorial units for statistics) regions. For more information, see [here](https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts). For license conditions, see the FAQ section of the Europa website [here](https://ec.europa.eu/eurostat/web/gisco/faq).

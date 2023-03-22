@@ -10,7 +10,10 @@ Jamie Taylor & Ethan Jones 2020-05-22
 """
 
 import sys
+import os
 import unittest
+from pathlib import Path
+
 from numpy.testing import assert_almost_equal, assert_equal
 
 # sys.path.append("../geocode/")
@@ -18,10 +21,21 @@ from geocode import Geocoder
 
 class geocodeTestCase(unittest.TestCase):
     """Tests for `geocode.py`."""
-    #def setUp(self):
-    #    with Geocoder() as geo:
-    #        geo.cache_manager.clear(delete_gmaps_cache=True)
-    #        geo.force_setup()
+    def test_clear_cache(self):
+        """Test the `cache_manager.clear()` method."""
+        with Geocoder() as geo:
+            geo.cache_manager.clear(delete_gmaps_cache=False)
+        cache_dir = geo.cache_manager.cache_dir
+        assert cache_dir.is_dir()
+        assert len([c for c in cache_dir.glob("*.p") if "gmaps" not in c.name]) == 0
+
+    def test_force_setup(self):
+        """Test the `force_setup()` method."""
+        with Geocoder() as geo:
+            geo.force_setup()
+        cache_dir = geo.cache_manager.cache_dir
+        assert cache_dir.is_dir()
+        assert len([c for c in cache_dir.glob("*.p") if "gmaps" not in c.name]) == 13
 
     def test_geocode_llsoa(self):
         """
@@ -55,6 +69,25 @@ class geocodeTestCase(unittest.TestCase):
         with Geocoder() as geo:
             self.assertEqual(geo.reverse_geocode_llsoa(latlons), llsoas)
             self.assertEqual(geo.reverse_geocode_llsoa(datazone_latlons, dz=True), datazones)
+
+    def test_reverse_geocode_nuts(self):
+        """
+        Test the `reverse_geocode_nuts()` function with several test cases.
+        """
+        nuts0 = ["UK", "FR", "DE"]
+        nuts1 = ["UKK", "FRG", "DE7"]
+        nuts2 = ["UKK1", "FRG0", "DE72"]
+        nuts3 = ["UKK15", "FRG04", "DE724"]
+        latlons = [
+            (51.3259, -1.9613),
+            (47.9995, 0.2335),
+            (50.8356, 8.7343)
+        ]
+        with Geocoder() as geo:
+            self.assertEqual(geo.reverse_geocode_nuts(latlons, level=3), nuts3)
+            self.assertEqual(geo.reverse_geocode_nuts(latlons, level=2), nuts2)
+            self.assertEqual(geo.reverse_geocode_nuts(latlons, level=1), nuts1)
+            self.assertEqual(geo.reverse_geocode_nuts(latlons, level=0), nuts0)
 
     def test_reverse_geocode_gsp(self):
         """

@@ -10,16 +10,17 @@ import os
 import pickle
 import glob
 import logging
+from pathlib import Path
 import errno
 from typing import Any, Optional
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 from . version import __version__
 
 class CacheManager:
     """Cache Python variables to files using Pickle."""
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: Optional[Path] = None):
         """
         Cache Python variables to files using Pickle.
 
@@ -29,15 +30,15 @@ class CacheManager:
             Path to a directory to use for writing cache files. If not set, or set to None, default
             location will be `os.path.join(os.path.dirname(os.path.realpath(__file__)), "cache")`.
         """
-        self.cache_dir = os.path.join(SCRIPT_DIR, "cache") if cache_dir is None else cache_dir
-        if not os.path.isdir(self.cache_dir):
+        self.cache_dir = SCRIPT_DIR.joinpath("cache") if cache_dir is None else cache_dir
+        if not self.cache_dir.is_dir():
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), self.cache_dir)
         self.version_string = __version__.replace(".", "-")
 
     def _get_filename(self, label):
         """Generate a filename using `label` and the current version string."""
         file_name = f"{label}_{self.version_string}.p"
-        return os.path.join(self.cache_dir, file_name)
+        return self.cache_dir.joinpath(file_name)
 
     def retrieve(self, label: str) -> Any:
         """
@@ -55,7 +56,7 @@ class CacheManager:
             cache was not found.
         """
         cache_file = self._get_filename(label)
-        if os.path.isfile(cache_file):
+        if cache_file.is_file():
             with open(cache_file, "rb") as pickle_fid:
                 return pickle.load(pickle_fid)
         return None
@@ -93,15 +94,15 @@ class CacheManager:
         """
         logging.debug("Deleting cache files (delete_gmaps_cache=%s, old_versions_only=%s)",
                       delete_gmaps_cache, old_versions_only)
-        cache_files = glob.glob(os.path.join(self.cache_dir, "*.p"))
+        cache_files = self.cache_dir.glob("*.p")
         for cache_file in cache_files:
-            if not delete_gmaps_cache and "gmaps" in cache_file:
+            if not delete_gmaps_cache and "gmaps" in cache_file.name:
                 continue
             if old_versions_only:
-                if self.version_string in cache_file:
+                if self.version_string in cache_file.name:
                     continue
             try:
-                os.remove(cache_file)
+                cache_file.unlink()
             except FileNotFoundError:
                 pass
             except:

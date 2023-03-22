@@ -10,10 +10,9 @@ import sys
 import logging
 import requests
 import json
-
 from typing import Optional, Iterable, Tuple, Union, List, Dict
-import pyproj
 
+import pyproj
 try:
     from shapely.geometry import shape, Point
     from shapely.ops import unary_union
@@ -238,8 +237,8 @@ def reverse_geocode(coords: List[Tuple[float, float]],
     `Shapely.MultiPolygon.contains()` is not great.
     """
     if not SHAPELY_AVAILABLE:
-        raise utilities.GenericException("Geocode was unable to import the Shapely library, follow the "
-                                         "installation instructions at "
+        raise utilities.GenericException("Geocode was unable to import the Shapely library, follow "
+                                         "the installation instructions at "
                                          "https://github.com/SheffieldSolar/Geocode")
     results = []
     tot = len(coords)

@@ -11,33 +11,24 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 import os
 import sys
 import logging
+from pathlib import Path
 import time as TIME
 import argparse
-from typing import Optional
 from shutil import copyfile
+from typing import Optional, Iterable, Tuple, Union, List, Dict, Literal
 
-from typing import Optional, Iterable, Tuple, Union, List, Dict
 import pyproj
-
-try:
-    from shapely.geometry import shape, Point
-    from shapely.ops import unary_union
-    SHAPELY_AVAILABLE = True
-except ImportError:
-    logging.warning("Failed to import Shapely library - you will not be able to reverse-geocode! "
-                    "See notes in the README about installing Shapely on Windows machines.")
-    SHAPELY_AVAILABLE = False
-
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-# sys.path.append(SCRIPT_DIR)
 
 from . utilities import GenericException
 from . cpo import CodePointOpen
 from . ngeso import NationalGrid
 from . ons_nrs import ONS_NRS
+from . eurostat import Eurostat
 from . gmaps import GMaps
 from . cache_manager import CacheManager
 from . version import __version__
+
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class Geocoder:
     """
@@ -45,8 +36,8 @@ class Geocoder:
     longitudes.
     """
     def __init__(self,
-                 cache_dir: Optional[str] = None,
-                 gmaps_key_file: Optional[str] = None) -> None:
+                 cache_dir: Optional[Path] = None,
+                 gmaps_key_file: Optional[Path] = None) -> None:
         """
         Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
         longitudes.
@@ -63,6 +54,7 @@ class Geocoder:
         self.cpo = CodePointOpen(self.cache_manager)
         self.ngeso = NationalGrid(self.cache_manager)
         self.ons_nrs = ONS_NRS(self.cache_manager)
+        self.eurostat = Eurostat(self.cache_manager)
         self.gmaps = GMaps(self.cache_manager, gmaps_key_file)
         self.status_codes = {
             0: "Failed",
@@ -78,9 +70,9 @@ class Geocoder:
 
     def __exit__(self, type, value, traceback):
         """Context manager."""
-        pass
+        self.gmaps.flush_cache()
 
-    def force_setup(self, ngeso_setup=True, cpo_setup=True, ons_setup=True):
+    def force_setup(self, ngeso_setup=True, cpo_setup=True, ons_setup=True, eurostat_setup=True):
         """Download all data and setup caches."""
         if ngeso_setup:
             self.ngeso.force_setup()
@@ -88,6 +80,8 @@ class Geocoder:
             self.cpo.force_setup()
         if ons_setup:
             self.ons_nrs.force_setup()
+        if eurostat_setup:
+            self.eurostat.force_setup()
 
     def get_dno_regions(self):
         """
@@ -137,11 +131,29 @@ class Geocoder:
         ----------
         `latlons` : iterable of strings
             Specific latlons to geocode to llsoa boundaries.
-        
         `dz` : Boolean
             Indication whether to consider datazones
         """
         return self.reverse_geocode(latlons, "llsoa", datazones=dz)
+
+    def reverse_geocode_nuts(self, latlons: List[Tuple[float, float]],
+                             level: Literal[0, 1, 2, 3],
+                             year: Literal[2003, 2006, 2010, 2013, 2016, 2021] = 2021
+                            ) -> List[str]:
+        """
+        Function to reverse geocode a collection of latlons into NUTS boundaries.
+        
+        Parameters
+        ----------
+        `latlons` : iterable of strings
+            Specific latlons to geocode to llsoa boundaries.
+        `level` : int
+            Specify the NUTS level, must be one of [0,1,2,3].
+        `year` : int
+            Specify the year of NUTS regulation, must be one of [2003,2006,2010,2013,2016,2021],
+            defaults to 2021.
+        """
+        return self.reverse_geocode(latlons, "nuts", level=level, year=year)
 
     def geocode_constituency(self, constituencies):
         """
@@ -242,6 +254,10 @@ class Geocoder:
         elif entity == "llsoa":
             datazones = kwargs.get("datazones", False)
             return self.ons_nrs.reverse_geocode_llsoa(latlons=latlons, datazones=datazones)
+        elif entity == "nuts":
+            level = kwargs.get("level")
+            year = kwargs.get("year", 2021)
+            return self.eurostat.reverse_geocode_nuts(latlons=latlons, level=level, year=year)
         else:
             raise GenericException(f"Entity '{entity}' is not supported.")
 
@@ -313,7 +329,7 @@ def parse_options():
                         required=False, help="Force download all datasets to local cache (useful "
                                              "if running inside a Docker container i.e. run this "
                                              "as part of image build). Possible values are "
-                                             "'ngeso', 'cpo', 'ons' or 'all'.")
+                                             "'ngeso', 'cpo', 'ons', 'eurostat' or 'all'.")
     parser.add_argument("--load-cpo-zip", dest="cpo_zip", action="store", type=str,
                         required=False, default=None, metavar="</path/to/zip-file>",
                         help="Load the Code Point Open data from a local zip file.")
@@ -323,7 +339,7 @@ def parse_options():
     options = parser.parse_args()
     def handle_options(options):
         if options.setup is not None:
-            valid_options = ["ngeso", "cpo", "ons", "all"]
+            valid_options = ["ngeso", "cpo", "ons", "eurostat", "all"]
             options.setup = list(map(str.lower, options.setup))
             if any(s not in valid_options for s in options.setup):
                 raise ValueError(f"Invalid value for `--setup` - valid values are {valid_options}")
@@ -353,7 +369,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for (lat, lon), llsoa in zip(sample_latlons, results):
         logging.info("%s, %s :    %s", lat, lon, llsoa)
-    sample_file = os.path.join(SCRIPT_DIR, "sample_latlons.txt")
+    sample_file = SCRIPT_DIR.joinpath("sample_latlons.txt")
     with open(sample_file) as fid:
         sample_latlons = [tuple(map(float, line.strip().split(",")))
                           for line in fid if line.strip()][:10]
@@ -374,7 +390,7 @@ def debug():
     logging.info("Time taken: %s seconds", round(TIME.time() - timerstart, 1))
     for constituency, (lat, lon) in zip(sample_constituencies, results):
         logging.info("%s :    %s, %s", constituency, lat, lon)
-    sample_file = os.path.join(SCRIPT_DIR, "sample_postcodes.txt")
+    sample_file = SCRIPT_DIR.joinpath("sample_postcodes.txt")
     with open(sample_file) as fid:
         postcodes = [line.strip() for line in fid if line.strip()][:10]
     timerstart = TIME.time()
@@ -409,9 +425,11 @@ def main():
         ngeso_setup =  "ngeso" in options.setup or "all" in options.setup
         cpo_setup = "cpo" in options.setup or "all" in options.setup
         ons_setup = "ons" in options.setup or "all" in options.setup
+        eurostat_setup = "eurostat" in options.setup or "all" in options.setup
         logging.info("Running forced setup")
         with Geocoder() as geocoder:
-            geocoder.force_setup(ngeso_setup=ngeso_setup, cpo_setup=cpo_setup, ons_setup=ons_setup)
+            geocoder.force_setup(ngeso_setup=ngeso_setup, cpo_setup=cpo_setup, ons_setup=ons_setup,
+                                 eurostat_setup=eurostat_setup)
     if options.debug:
         debug()
 

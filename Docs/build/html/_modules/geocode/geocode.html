@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>geocode.geocode &mdash; Geocode 0.11.1 documentation</title>
+  <title>geocode.geocode &mdash; Geocode 0.12.0 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
@@ -80,33 +80,24 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">TIME</span>
 <span class="kn">import</span> <span class="nn">argparse</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 <span class="kn">from</span> <span class="nn">shutil</span> <span class="kn">import</span> <span class="n">copyfile</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Literal</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
 <span class="kn">import</span> <span class="nn">pyproj</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">shape</span><span class="p">,</span> <span class="n">Point</span>
-    <span class="kn">from</span> <span class="nn">shapely.ops</span> <span class="kn">import</span> <span class="n">unary_union</span>
-    <span class="n">SHAPELY_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to import Shapely library - you will not be able to reverse-geocode! &quot;</span>
-                    <span class="s2">&quot;See notes in the README about installing Shapely on Windows machines.&quot;</span><span class="p">)</span>
-    <span class="n">SHAPELY_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
-
-<span class="n">SCRIPT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
-<span class="c1"># sys.path.append(SCRIPT_DIR)</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">utilities</span> <span class="kn">import</span> <span class="nn">GenericException</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">cpo</span> <span class="kn">import</span> <span class="nn">CodePointOpen</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">ngeso</span> <span class="kn">import</span> <span class="nn">NationalGrid</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">ons_nrs</span> <span class="kn">import</span> <span class="nn">ONS_NRS</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="n">eurostat</span> <span class="kn">import</span> <span class="nn">Eurostat</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">gmaps</span> <span class="kn">import</span> <span class="nn">GMaps</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">cache_manager</span> <span class="kn">import</span> <span class="nn">CacheManager</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="n">version</span> <span class="kn">import</span> <span class="nn">__version__</span>
+
+<span class="n">SCRIPT_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
 
 <div class="viewcode-block" id="Geocoder"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder">[docs]</a><span class="k">class</span> <span class="nc">Geocoder</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -114,8 +105,8 @@
 <span class="sd">    longitudes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                 <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">gmaps_key_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                 <span class="n">cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">gmaps_key_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and</span>
 <span class="sd">        longitudes.</span>
@@ -132,6 +123,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">cpo</span> <span class="o">=</span> <span class="n">CodePointOpen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span> <span class="o">=</span> <span class="n">NationalGrid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span> <span class="o">=</span> <span class="n">ONS_NRS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eurostat</span> <span class="o">=</span> <span class="n">Eurostat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gmaps</span> <span class="o">=</span> <span class="n">GMaps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_manager</span><span class="p">,</span> <span class="n">gmaps_key_file</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">status_codes</span> <span class="o">=</span> <span class="p">{</span>
             <span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;Failed&quot;</span><span class="p">,</span>
@@ -147,16 +139,18 @@
 
     <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Context manager.&quot;&quot;&quot;</span>
-        <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gmaps</span><span class="o">.</span><span class="n">flush_cache</span><span class="p">()</span>
 
-<div class="viewcode-block" id="Geocoder.force_setup"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.force_setup">[docs]</a>    <span class="k">def</span> <span class="nf">force_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ngeso_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="Geocoder.force_setup"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.force_setup">[docs]</a>    <span class="k">def</span> <span class="nf">force_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ngeso_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">eurostat_setup</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Download all data and setup caches.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">ngeso_setup</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ngeso</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">cpo_setup</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cpo</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">ons_setup</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">eurostat_setup</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eurostat</span><span class="o">.</span><span class="n">force_setup</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Geocoder.get_dno_regions"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.get_dno_regions">[docs]</a>    <span class="k">def</span> <span class="nf">get_dno_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -206,11 +200,29 @@
 <span class="sd">        ----------</span>
 <span class="sd">        `latlons` : iterable of strings</span>
 <span class="sd">            Specific latlons to geocode to llsoa boundaries.</span>
-<span class="sd">        </span>
 <span class="sd">        `dz` : Boolean</span>
 <span class="sd">            Indication whether to consider datazones</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="p">,</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">,</span> <span class="n">datazones</span><span class="o">=</span><span class="n">dz</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Geocoder.reverse_geocode_nuts"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.reverse_geocode_nuts">[docs]</a>    <span class="k">def</span> <span class="nf">reverse_geocode_nuts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latlons</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+                             <span class="n">level</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+                             <span class="n">year</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">2003</span><span class="p">,</span> <span class="mi">2006</span><span class="p">,</span> <span class="mi">2010</span><span class="p">,</span> <span class="mi">2013</span><span class="p">,</span> <span class="mi">2016</span><span class="p">,</span> <span class="mi">2021</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2021</span>
+                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to reverse geocode a collection of latlons into NUTS boundaries.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        `latlons` : iterable of strings</span>
+<span class="sd">            Specific latlons to geocode to llsoa boundaries.</span>
+<span class="sd">        `level` : int</span>
+<span class="sd">            Specify the NUTS level, must be one of [0,1,2,3].</span>
+<span class="sd">        `year` : int</span>
+<span class="sd">            Specify the year of NUTS regulation, must be one of [2003,2006,2010,2013,2016,2021],</span>
+<span class="sd">            defaults to 2021.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_geocode</span><span class="p">(</span><span class="n">latlons</span><span class="p">,</span> <span class="s2">&quot;nuts&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Geocoder.geocode_constituency"><a class="viewcode-back" href="../../modules.html#geocode.Geocoder.geocode_constituency">[docs]</a>    <span class="k">def</span> <span class="nf">geocode_constituency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constituencies</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -311,6 +323,10 @@
         <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;llsoa&quot;</span><span class="p">:</span>
             <span class="n">datazones</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;datazones&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ons_nrs</span><span class="o">.</span><span class="n">reverse_geocode_llsoa</span><span class="p">(</span><span class="n">latlons</span><span class="o">=</span><span class="n">latlons</span><span class="p">,</span> <span class="n">datazones</span><span class="o">=</span><span class="n">datazones</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">entity</span> <span class="o">==</span> <span class="s2">&quot;nuts&quot;</span><span class="p">:</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;level&quot;</span><span class="p">)</span>
+            <span class="n">year</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="mi">2021</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eurostat</span><span class="o">.</span><span class="n">reverse_geocode_nuts</span><span class="p">(</span><span class="n">latlons</span><span class="o">=</span><span class="n">latlons</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">GenericException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entity &#39;</span><span class="si">{</span><span class="n">entity</span><span class="si">}</span><span class="s2">&#39; is not supported.&quot;</span><span class="p">)</span></div>
 
@@ -382,7 +398,7 @@
                         <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Force download all datasets to local cache (useful &quot;</span>
                                              <span class="s2">&quot;if running inside a Docker container i.e. run this &quot;</span>
                                              <span class="s2">&quot;as part of image build). Possible values are &quot;</span>
-                                             <span class="s2">&quot;&#39;ngeso&#39;, &#39;cpo&#39;, &#39;ons&#39; or &#39;all&#39;.&quot;</span><span class="p">)</span>
+                                             <span class="s2">&quot;&#39;ngeso&#39;, &#39;cpo&#39;, &#39;ons&#39;, &#39;eurostat&#39; or &#39;all&#39;.&quot;</span><span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--load-cpo-zip&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;cpo_zip&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
                         <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;&lt;/path/to/zip-file&gt;&quot;</span><span class="p">,</span>
                         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Load the Code Point Open data from a local zip file.&quot;</span><span class="p">)</span>
@@ -392,7 +408,7 @@
     <span class="n">options</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
     <span class="k">def</span> <span class="nf">handle_options</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">valid_options</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ngeso&quot;</span><span class="p">,</span> <span class="s2">&quot;cpo&quot;</span><span class="p">,</span> <span class="s2">&quot;ons&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span><span class="p">]</span>
+            <span class="n">valid_options</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ngeso&quot;</span><span class="p">,</span> <span class="s2">&quot;cpo&quot;</span><span class="p">,</span> <span class="s2">&quot;ons&quot;</span><span class="p">,</span> <span class="s2">&quot;eurostat&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span><span class="p">]</span>
             <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span><span class="p">))</span>
             <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_options</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid value for `--setup` - valid values are </span><span class="si">{</span><span class="n">valid_options</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -422,7 +438,7 @@
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
     <span class="k">for</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span> <span class="n">llsoa</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_latlons</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">llsoa</span><span class="p">)</span>
-    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SCRIPT_DIR</span><span class="p">,</span> <span class="s2">&quot;sample_latlons.txt&quot;</span><span class="p">)</span>
+    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">SCRIPT_DIR</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;sample_latlons.txt&quot;</span><span class="p">)</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">sample_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
         <span class="n">sample_latlons</span> <span class="o">=</span> <span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)))</span>
                           <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fid</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()][:</span><span class="mi">10</span><span class="p">]</span>
@@ -443,7 +459,7 @@
     <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Time taken: </span><span class="si">%s</span><span class="s2"> seconds&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">timerstart</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
     <span class="k">for</span> <span class="n">constituency</span><span class="p">,</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_constituencies</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> :    </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">constituency</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
-    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SCRIPT_DIR</span><span class="p">,</span> <span class="s2">&quot;sample_postcodes.txt&quot;</span><span class="p">)</span>
+    <span class="n">sample_file</span> <span class="o">=</span> <span class="n">SCRIPT_DIR</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;sample_postcodes.txt&quot;</span><span class="p">)</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">sample_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">fid</span><span class="p">:</span>
         <span class="n">postcodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fid</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()][:</span><span class="mi">10</span><span class="p">]</span>
     <span class="n">timerstart</span> <span class="o">=</span> <span class="n">TIME</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
@@ -478,9 +494,11 @@
         <span class="n">ngeso_setup</span> <span class="o">=</span>  <span class="s2">&quot;ngeso&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
         <span class="n">cpo_setup</span> <span class="o">=</span> <span class="s2">&quot;cpo&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
         <span class="n">ons_setup</span> <span class="o">=</span> <span class="s2">&quot;ons&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
+        <span class="n">eurostat_setup</span> <span class="o">=</span> <span class="s2">&quot;eurostat&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span> <span class="ow">or</span> <span class="s2">&quot;all&quot;</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">setup</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running forced setup&quot;</span><span class="p">)</span>
         <span class="k">with</span> <span class="n">Geocoder</span><span class="p">()</span> <span class="k">as</span> <span class="n">geocoder</span><span class="p">:</span>
-            <span class="n">geocoder</span><span class="o">.</span><span class="n">force_setup</span><span class="p">(</span><span class="n">ngeso_setup</span><span class="o">=</span><span class="n">ngeso_setup</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="n">cpo_setup</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="n">ons_setup</span><span class="p">)</span>
+            <span class="n">geocoder</span><span class="o">.</span><span class="n">force_setup</span><span class="p">(</span><span class="n">ngeso_setup</span><span class="o">=</span><span class="n">ngeso_setup</span><span class="p">,</span> <span class="n">cpo_setup</span><span class="o">=</span><span class="n">cpo_setup</span><span class="p">,</span> <span class="n">ons_setup</span><span class="o">=</span><span class="n">ons_setup</span><span class="p">,</span>
+                                 <span class="n">eurostat_setup</span><span class="o">=</span><span class="n">eurostat_setup</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">options</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
         <span class="n">debug</span><span class="p">()</span>
 

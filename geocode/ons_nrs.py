@@ -12,22 +12,21 @@ import zipfile
 import json
 import csv
 import logging
+from pathlib import Path
+from typing import Optional, Iterable, Tuple, Union, List, Dict
+
 import pandas as pd
 import shapefile
-
-from typing import Optional, Iterable, Tuple, Union, List, Dict
 try:
     from shapely.geometry import shape, Point
     from shapely.ops import unary_union
-    SHAPELY_AVAILABLE = True
 except ImportError:
     logging.warning("Failed to import Shapely library - you will not be able to reverse-geocode! "
                     "See notes in the README about installing Shapely on Windows machines.")
-    SHAPELY_AVAILABLE = False
 
 from . import utilities as utils
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class ONS_NRS:
     """
@@ -39,15 +38,11 @@ class ONS_NRS:
         (NRS).
         """
         self.cache_manager = cache_manager
-        data_dir = os.path.join(SCRIPT_DIR, "ons")
-        self.nrs_zipfile = os.path.join(data_dir, "nrs.zip")
-        self.dz_lookup_cache_file = "datazone_lookup"
-        self.constituency_lookup_file = os.path.join(data_dir, "constituency_centroids_Dec2020.psv")
-        self.constituency_cache_file = os.path.join(data_dir, "constituency_centroids.psv")
-        self.lad_lookup_file = os.path.join(data_dir, "lad_centroids_May2021.psv")
-        self.lad_cache_file = "lad_centroids"
-        self.pc_llsoa_lookup_cache_file = "pc_llsoa_lookup"
-        self.pc_llsoa_zipfile = os.path.join(data_dir, "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip")
+        data_dir = SCRIPT_DIR.joinpath("ons")
+        self.nrs_zipfile = data_dir.joinpath("nrs.zip")
+        self.constituency_lookup_file = data_dir.joinpath("constituency_centroids_Dec2020.psv")
+        self.lad_lookup_file = data_dir.joinpath("lad_centroids_May2021.psv")
+        self.pc_llsoa_zipfile = data_dir.joinpath("PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip")
         self.llsoa_lookup = None
         self.llsoa_regions = None
         self.llsoa_reverse_lookup = None
@@ -142,10 +137,9 @@ class ONS_NRS:
 
     def _load_datazone_lookup(self):
         """Load a lookup of Scottish LLSOA <-> Datazone."""
-        datazone_lookup_cache_contents = self.cache_manager.retrieve(self.dz_lookup_cache_file)
+        datazone_lookup_cache_contents = self.cache_manager.retrieve("datazone_lookup")
         if datazone_lookup_cache_contents is not None:
-            logging.debug("Loading LLSOA<->Datazone lookup from cache ('%s')",
-                          self.dz_lookup_cache_file)
+            logging.debug("Loading LLSOA<->Datazone lookup from cache ('%s')", "datazone_lookup")
             return datazone_lookup_cache_contents
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
             with nrs_zip.open("OA_DZ_IZ_2011.csv", "r") as fid:
@@ -153,15 +147,14 @@ class ONS_NRS:
         dz_lookup.set_index("OutputArea2011Code", inplace=True)
         dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
         dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
-        self.cache_manager.write(self.dz_lookup_cache_file, dz_lookup)
+        self.cache_manager.write("datazone_lookup", dz_lookup)
         return dz_lookup
 
     def _load_constituency_lookup(self):
         """Load a lookup of UK constituency -> Geospatial Centroid."""
-        constituency_lookup_cache_contents = self.cache_manager.retrieve(self.constituency_cache_file)
+        constituency_lookup_cache_contents = self.cache_manager.retrieve("constituency_centroids")
         if constituency_lookup_cache_contents is not None:
-            logging.debug("Loading Constituency lookup from cache ('%s')",
-                      self.constituency_cache_file)
+            logging.debug("Loading Constituency lookup from cache ('%s')", "constituency_centroids")
             return constituency_lookup_cache_contents
         logging.info("Extracting the Constituency Centroids data (this only needs to be done "
                      "once)")
@@ -171,9 +164,8 @@ class ONS_NRS:
                 _, name, longitude, latitude = line.strip().split("|")
                 match_str = name.strip().replace(" ", "").replace(",", "").lower()
                 constituency_lookup[match_str] = (float(latitude), float(longitude))
-        self.cache_manager.write(self.constituency_cache_file, constituency_lookup)
-        logging.info("Constituency lookup extracted and pickled to '%s'",
-                     self.constituency_cache_file)
+        self.cache_manager.write("constituency_centroids", constituency_lookup)
+        logging.info("Constituency lookup extracted and pickled to '%s'", "constituency_centroids")
         return constituency_lookup
 
     def geocode_llsoa(self,
@@ -231,10 +223,6 @@ class ONS_NRS:
             The LLSOA codes that the input latitudes and longitudes fall within. Any lat/lons which
             do not fall inside an LLSOA boundary will return None.
         """
-        if not SHAPELY_AVAILABLE:
-            raise utils.GenericException("Geocode was unable to import the Shapely library, follow the "
-                                   "installation instructions at "
-                                   "https://github.com/SheffieldSolar/Geocode")
         if self.llsoa_regions is None:
             self.llsoa_regions = self._load_llsoa_boundaries()
         results = utils.reverse_geocode(latlons, self.llsoa_regions)
@@ -335,10 +323,10 @@ class ONS_NRS:
 
     def _load_lad_lookup(self):
         """Load a lookup of UK Local Authority District -> Geospatial Centroid."""
-        lad_lookup_cache_contents = self.cache_manager.retrieve(self.lad_cache_file)
+        lad_lookup_cache_contents = self.cache_manager.retrieve("lad_centroids")
         if lad_lookup_cache_contents is not None:
             logging.debug("Loading Local Authority District lookup from cache ('%s')",
-                          self.lad_cache_file)
+                          "lad_centroids")
             return lad_lookup_cache_contents
         logging.info("Extracting the Local Authority District Centroids data (this only needs to "
                      "be done once)")
@@ -348,22 +336,21 @@ class ONS_NRS:
                 _, name, longitude, latitude = line.strip().split("|")
                 match_str = name.strip().replace(" ", "").replace(",", "").lower()
                 lad_lookup[match_str] = (float(latitude), float(longitude))
-        self.cache_manager.write(self.lad_cache_file, lad_lookup)
+        self.cache_manager.write("lad_centroids", lad_lookup)
         logging.info("Local Authority District lookup extracted and pickled to '%s'",
-                     self.lad_cache_file)
+                     "lad_centroids")
         return lad_lookup
 
     def _load_postcode_llsoa_lookup(self):
         """Load a lookup of postcode <-> LLSOA."""
-        postcode_llsoa_lookup_cache_contents = self.cache_manager.retrieve(self.pc_llsoa_lookup_cache_file)
+        postcode_llsoa_lookup_cache_contents = self.cache_manager.retrieve("pc_llsoa_lookup")
         if postcode_llsoa_lookup_cache_contents is not None:
-            logging.debug("Loading postcode<->LLSOA lookup from cache ('%s')",
-                          self.pc_llsoa_lookup_cache_file)
+            logging.debug("Loading postcode<->LLSOA lookup from cache ('%s')", "pc_llsoa_lookup")
             return postcode_llsoa_lookup_cache_contents
         pc_llsoa_lookup = pd.read_csv(self.pc_llsoa_zipfile, dtype=str)
         pc_llsoa_lookup["postcode"] = pc_llsoa_lookup.pcds.str.strip().str.upper()\
                                                                       .str.replace(" ", "")
-        self.cache_manager.write(self.pc_llsoa_lookup_cache_file, pc_llsoa_lookup)
+        self.cache_manager.write("pc_llsoa_lookup", pc_llsoa_lookup)
         return pc_llsoa_lookup
 
     def _lad_centroid(self, local_authority):

@@ -11,21 +11,22 @@ import sys
 import pickle
 import zipfile
 import logging
+from pathlib import Path
+from typing import Optional, Iterable, Tuple, Union, List, Dict
+
 import pandas as pd
 import numpy as np
-from typing import Optional, Iterable, Tuple, Union, List, Dict
 
 from . utilities import GenericException, bng2latlon
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class CodePointOpen:
     """The Code Point Open data manager for the Geocode class."""
     def __init__(self, cache_manager):
         """The Code Point Open data manager for the Geocode class."""
         self.cache_manager = cache_manager
-        self.cpo_zipfile = os.path.join(SCRIPT_DIR, "code_point_open", "codepo_gb.zip")
-        self.cpo_cache_file = "code_point_open"
+        self.cpo_zipfile = SCRIPT_DIR.joinpath("code_point_open", "codepo_gb.zip")
         self.cpo = None
         self.cache = None
 
@@ -39,9 +40,10 @@ class CodePointOpen:
         """Load the OS Code Point Open Database, either from raw zip file or local cache."""
         if self.cpo is not None and not force_reload:
             return
-        cpo_cache_contents = self.cache_manager.retrieve(self.cpo_cache_file)
+        cpo_cache_name = "code_point_open"
+        cpo_cache_contents = self.cache_manager.retrieve(cpo_cache_name)
         if cpo_cache_contents is not None and not force_reload:
-            logging.debug("Loading Code Point Open data from cache ('%s')", self.cpo_cache_file)
+            logging.debug("Loading Code Point Open data from cache ('%s')", cpo_cache_name)
             self.cpo = cpo_cache_contents
             return
         logging.info("Extracting the Code Point Open data (this only needs to be done once)")
@@ -72,8 +74,8 @@ class CodePointOpen:
         cpo.loc[nn_indices, "latitude"] = lats
         cpo["outward_postcode"] = cpo["Postcode"].str.slice(0, -3).str.strip()
         cpo["inward_postcode"] = cpo["Postcode"].str.slice(-3).str.strip()
-        self.cache_manager.write(self.cpo_cache_file, cpo)
-        logging.info("Code Point Open extracted and pickled to '%s'", self.cpo_cache_file)
+        self.cache_manager.write(cpo_cache_name, cpo)
+        logging.info("Code Point Open extracted and pickled to cache")
         self.cpo = cpo
         return
     

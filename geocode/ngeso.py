@@ -11,22 +11,21 @@ import sys
 import pickle
 import logging
 import json
+from pathlib import Path
+from typing import Optional, Iterable, Tuple, Union, List, Dict
+
 import pandas as pd
 import geopandas as gpd
-
-from typing import Optional, Iterable, Tuple, Union, List, Dict
 try:
     from shapely.geometry import shape, Point
     from shapely.ops import unary_union
-    SHAPELY_AVAILABLE = True
 except ImportError:
     logging.warning("Failed to import Shapely library - you will not be able to reverse-geocode! "
                     "See notes in the README about installing Shapely on Windows machines.")
-    SHAPELY_AVAILABLE = False
 
 from . import utilities as utils
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class NationalGrid:
     """The NGESO data manager for the Geocode class."""
@@ -156,10 +155,6 @@ class NationalGrid:
         -----
         Return format needs some work, maybe switch to DataFrames in future release.
         """
-        #if not SHAPELY_AVAILABLE:
-        #    raise utilities.GenericException("Geocode was unable to import the Shapely library, follow the "
-        #                           "installation instructions at "
-        #                           "https://github.com/SheffieldSolar/Geocode")
         logging.debug("Reverse geocoding %s latlons to 20220314 GSP", len(latlons))
         if self.gsp_regions is None:
             self.gsp_regions = self._load_gsp_boundaries_20220314()
@@ -198,10 +193,6 @@ class NationalGrid:
         -----
         Return format needs some work, maybe switch to DataFrames in future release.
         """
-        if not SHAPELY_AVAILABLE:
-            raise utils.GenericException("Geocode was unable to import the Shapely library, follow the "
-                                   "installation instructions at "
-                                   "https://github.com/SheffieldSolar/Geocode")
         if self.gsp_regions_20181031 is None:
             self.gsp_regions_20181031 = self.load_gsp_boundaries_20181031()
         lats = [l[0] for l in latlons]
