@@ -27,7 +27,7 @@ setup(
     version="0.12.0",
 
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
-    long_description=long_description,
+    long_description=long_description.replace("\r", ""),
     long_description_content_type="text/markdown",
 
     # The project's main homepage.
