@@ -275,7 +275,7 @@ def _fetch_from_ons_api(url):
             pages.append(page)
             offset += record_count
         else:
-            raise utils.GenericException("Encountered an error while extracting LLSOA data from ONS API.")
+            raise GenericException("Encountered an error while extracting LLSOA data from ONS API.")
     return pages
 
 def fetch_from_api(url):
