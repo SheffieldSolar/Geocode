@@ -83,7 +83,7 @@ class Eurostat:
                                                           crs=raw["crs"]["properties"]["name"])
             nuts_regions.geometry = nuts_regions.buffer(0)
         else:
-            raise utils.GenericException("Encountered an error while extracting {year} NUTS{level} "
+            raise utils.GenericException(f"Encountered an error while extracting {year} NUTS{level} "
                                          "region data from Eurostat API.")
         self.cache_manager.write(cache_label, nuts_regions)
         logging.info("%s NUTS%s boundaries extracted and pickled to file ('%s')",
