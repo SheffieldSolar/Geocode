@@ -130,11 +130,11 @@ class geocodeTestCase(unittest.TestCase):
         """
         Test the `geocode_postcode()` function with several test cases.
         """
-        postcodes = ["RG1 3PE", "S10 2FR", "FY2 0SQ"]
+        postcodes = ["RG1 3PE", "S10 2FR", "FY2 0RD"]
         latlons = [
             (51.45511, -0.94070, 1),
             (53.37708, -1.48700, 1),
-            (53.85414,-3.02139, 1)
+            (53.83989, -3.04328, 1)
         ]
         with Geocoder() as geo:
            assert_almost_equal(geo.geocode_postcode(postcodes).tolist(), latlons, decimal=4)
