@@ -32,7 +32,7 @@ class ONS_NRS:
     """
     Manage data from the Office for National Statistics (ONS) and National Records Scotland (NRS).
     """
-    def __init__(self, cache_manager):
+    def __init__(self, cache_manager, proxies=None, ssl_verify=True):
         """
         Manage data from the Office for National Statistics (ONS) and National Records Scotland
         (NRS).
@@ -50,6 +50,8 @@ class ONS_NRS:
         self.dz_lookup = None
         self.lad_lookup = None
         self.pc_llsoa_lookup = None
+        self.proxies = proxies
+        self.ssl_verify = ssl_verify
 
     def force_setup(self):
         """
@@ -72,7 +74,11 @@ class ONS_NRS:
         logging.info("Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
                      "once)")
         ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
-        pages = utils._fetch_from_ons_api(ons_url)
+        pages = utils._fetch_from_ons_api(
+            ons_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         engwales_lookup = {f["properties"]["lsoa11cd"]:
                                tuple(f["geometry"]["coordinates"][::-1])
                                for page in pages for f in page["features"]}
@@ -119,7 +125,11 @@ class ONS_NRS:
         ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
         nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
         nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        pages = utils._fetch_from_ons_api(ons_url)
+        pages = utils._fetch_from_ons_api(
+            ons_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         engwales_regions = {f["properties"]["LSOA11CD"]: shape(f["geometry"]).buffer(0)
                             for page in pages for f in page["features"]}
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:

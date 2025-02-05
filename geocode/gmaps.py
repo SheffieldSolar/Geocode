@@ -23,7 +23,7 @@ SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class GMaps:
     """The Gmaps data manager for the Geocode class."""
-    def __init__(self, cache_manager, gmaps_key_file=None):
+    def __init__(self, cache_manager, gmaps_key_file=None, proxies=None, ssl_verify=True):
         """The Gmaps data manager for the Geocode class."""
         self.cache_manager = cache_manager
         self.gmaps_key = None
@@ -33,6 +33,8 @@ class GMaps:
                                   else self.cache_manager.cache_dir.joinpath("key.txt")
         self._load_cache()
         self.cache_modified = False
+        self.proxies = proxies
+        self.ssl_verify = ssl_verify
 
     def __enter__(self):
         """Context manager."""
@@ -110,7 +112,11 @@ class GMaps:
         if self.gmaps_key is None:
             self.gmaps_key = self._load_key()
             if self.gmaps_key is not None:
-                self.gmaps_client = googlemaps.Client(key=self.gmaps_key)
+                self.gmaps_client = googlemaps.Client(
+                    key=self.gmaps_key,
+                    proxies=self.proxies,
+                    ssl_verify=self.ssl_verify
+                )
         if self.cache is None:
             self._load_cache()
         sep = ", " if address and postcode else ""
