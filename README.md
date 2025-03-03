@@ -162,6 +162,28 @@ In the above example, `postcodes` and `addresses` are lists of strings, but it s
 
 When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and will likely be refined in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points/r/gsp_-_gnode_-_direct_connect_-_region_lookup) dataset on the ESO Data Portal). In testing, the `reverse_geocode_gsp()` method was able to allocate ~1 million random lat/lons to the correct GSP in average wall-clock time of around 300 seconds.
 
+#### Use with a proxy
+
+If your network configuration requires the use of a proxy server when downloading data from external URLs/APIs, you can specify the `proxies` parameter when instantiating the `Geocoder` class.
+
+e.g.
+
+```Python
+from geocode import Geocoder
+
+def main():
+    geocoder = Geocoder(
+        proxies=dict(
+            http="http://example.com",
+            https="http://example.com",
+        ),
+        ssl_verify=False
+    )
+```
+
+In some network configurations, it may also be necessary to disable SSL certificate checks, which you can do by setting `ssl_verify=False`. This is not recommended!
+
+
 ### Command Line Utilities
 
 #### latlons2llsoa
