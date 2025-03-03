@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.12.1*
+*Latest Version: 1.0.0*
 
 ## What is this repository for?
 
@@ -20,7 +20,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 
 ## How do I get set up?
 
-Developed and tested with Python 3.9, should work for 3.7+.
+Developed and tested with Python 3.12, should work for 3.11+.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
@@ -64,9 +64,7 @@ This is especially useful if you are installing / running the library inside a c
 
 **Important**
 
-Note that this library makes use of the [Shapely library](https://pypi.org/project/Shapely/) from PyPi, which often does not install correctly on Windows machines due to some missing dependencies. If using Windows and you see an error like `OSError: [WinError 126] The specified module could not be found`, you should install Shapely from one of the unofficial binaries [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely) e.g.
-
-```>> pip install https://download.lfd.uci.edu/pythonlibs/s2jqpv5t/Shapely-1.7.0-cp37-cp37m-win_amd64.whl```
+Note that this library makes use of the [Shapely library](https://pypi.org/project/Shapely/) from PyPi, which often does not install correctly on Windows machines due to some missing dependencies. If using Windows and you see an error like `OSError: [WinError 126] The specified module could not be found`, you should install Shapely from one of the unofficial binaries [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).
 
 All data required by this library is either packaged with the code or is downloaded at runtime from public APIs. Some data is subect to licenses and/or you may wish to manually update certain datasets (e.g. OS Code Point Open) - see [appendix](#Appendix).
 
