@@ -27,7 +27,7 @@ class Eurostat:
     """
     Manage data from Eurostat.
     """
-    def __init__(self, cache_manager):
+    def __init__(self, cache_manager, proxies=None, ssl_verify=True):
         """
         Manage data from Eurostat.
         """
@@ -36,6 +36,8 @@ class Eurostat:
         self.nuts_regions = {
             (l, y): None for y in [2003, 2006, 2010, 2013, 2016, 2021] for l in range(4)
         }
+        self.proxies = proxies
+        self.ssl_verify = ssl_verify
 
     def force_setup(self):
         """
@@ -76,15 +78,19 @@ class Eurostat:
                      "done once)", year, level)
         eurostat_url = ("https://gisco-services.ec.europa.eu/distribution/v2/nuts/geojson/"
                         f"NUTS_RG_01M_{year}_4326_LEVL_{level}.geojson")
-        success, api_response = utils.fetch_from_api(eurostat_url)
+        success, api_response = utils.fetch_from_api(
+            eurostat_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         if success:
             raw = json.loads(api_response.text)
             nuts_regions = gpd.GeoDataFrame.from_features(raw["features"],
                                                           crs=raw["crs"]["properties"]["name"])
             nuts_regions.geometry = nuts_regions.buffer(0)
         else:
-            raise utils.GenericException("Encountered an error while extracting %s NUTS%s region "
-                                         "data from Eurostat API.")
+            raise utils.GenericException(f"Encountered an error while extracting {year} NUTS{level} "
+                                         "region data from Eurostat API.")
         self.cache_manager.write(cache_label, nuts_regions)
         logging.info("%s NUTS%s boundaries extracted and pickled to file ('%s')",
                      year, level, cache_label)

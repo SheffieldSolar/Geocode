@@ -258,7 +258,7 @@ def reverse_geocode(coords: List[Tuple[float, float]],
             results.append(None)
     return results
 
-def _fetch_from_ons_api(url):
+def _fetch_from_ons_api(url, proxies=None, ssl_verify=True):
     """Download data from the ONS ARCGIS API which uses pagination."""
     exceeded_transfer_limit = True
     offset = 0
@@ -266,7 +266,7 @@ def _fetch_from_ons_api(url):
     pages = []
     while exceeded_transfer_limit:
         url_ = f"{url}&resultOffset={offset}&resultRecordCount={record_count}"
-        success, api_response = fetch_from_api(url_)
+        success, api_response = fetch_from_api(url_, proxies=proxies, ssl_verify=ssl_verify)
         if success:
             page = json.loads(api_response.text)
             exceeded_transfer_limit = "properties" in page and \
@@ -278,12 +278,12 @@ def _fetch_from_ons_api(url):
             raise GenericException("Encountered an error while extracting LLSOA data from ONS API.")
     return pages
 
-def fetch_from_api(url):
+def fetch_from_api(url, proxies=None, ssl_verify=True):
     """Generic function to GET data from web API with retries."""
     retries = 0
     while retries < 3:
         try:
-            response = requests.get(url)
+            response = requests.get(url, proxies=proxies, verify=ssl_verify)
             response.raise_for_status()
             if response.status_code != 200:
                 retries += 1

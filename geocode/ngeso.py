@@ -29,7 +29,7 @@ SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 class NationalGrid:
     """The NGESO data manager for the Geocode class."""
-    def __init__(self, cache_manager):
+    def __init__(self, cache_manager, proxies=None, ssl_verify=True):
         """The NGESO data manager for the Geocode class."""
         self.cache_manager = cache_manager
         self.gsp_lookup_20181031_cache_file = "gsp_lookup_20181031"
@@ -40,6 +40,8 @@ class NationalGrid:
         self.gsp_regions_20181031 = None
         self.dno_regions = None
         self.gsp_lookup_20181031 = None
+        self.proxies = proxies
+        self.ssl_verify = ssl_verify
 
     def force_setup(self):
         """
@@ -58,7 +60,11 @@ class NationalGrid:
         logging.info("Extracting the GSP lookup data from NGESO's Data Portal API (this only needs "
                      "to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/bbe2cc72-a6c6-46e6-8f4e-48b879467368/download/gsp_gnode_directconnect_region_lookup.csv"
-        success, api_response = utils.fetch_from_api(eso_url)
+        success, api_response = utils.fetch_from_api(
+            eso_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         if success:
             f = StringIO(str(api_response.text).replace("\ufeff", "")) # Remove BOM character
             gsp_lookup = pd.read_csv(f)
@@ -83,7 +89,11 @@ class NationalGrid:
         logging.info("Extracting the 20220314 GSP boundary data from NGESO's Data Portal API (this "
                      "only needs to be done once)")
         eso_url = "https://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson"
-        success, api_response = utils.fetch_from_api(eso_url)
+        success, api_response = utils.fetch_from_api(
+            eso_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         if success:
             raw = json.loads(api_response.text)
             gsp_regions = gpd.GeoDataFrame.from_features(raw["features"],
@@ -116,7 +126,11 @@ class NationalGrid:
         logging.info("Extracting the DNO License Area boundary data from NGESO's Data Portal API "
                      "(this only needs to be done once)")
         eso_url = "http://data.nationalgrideso.com/backend/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
-        success, api_response = utils.fetch_from_api(eso_url)
+        success, api_response = utils.fetch_from_api(
+            eso_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
         if success:
             raw = json.loads(api_response.text)
             dno_regions = {}

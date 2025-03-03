@@ -37,7 +37,9 @@ class Geocoder:
     """
     def __init__(self,
                  cache_dir: Optional[Path] = None,
-                 gmaps_key_file: Optional[Path] = None) -> None:
+                 gmaps_key_file: Optional[Path] = None,
+                 proxies: Optional[Dict] = None,
+                 ssl_verify: bool = True) -> None:
         """
         Geocode addresses, postcodes, LLSOAs or Constituencies or reverse-geocode latitudes and
         longitudes.
@@ -48,14 +50,22 @@ class Geocoder:
             Optionally specify a directory to use for caching.
         `gmaps_key_file` : string
             Path to an API key file for Google Maps Geocode API.
+        `proxies` : Optional[Dict]
+            Optionally specify a Dict of proxies for http and https requests in the format:
+            {"http": "<address>", "https": "<address>"}
+        `ssl_verify` : Boolean
+            Set to False to disable SSL verification when downloading data from APIs. Defaults to
+            True.
         """
         self.cache_manager = CacheManager(cache_dir)
         self.cache_manager.clear(delete_gmaps_cache=False, old_versions_only=True)
         self.cpo = CodePointOpen(self.cache_manager)
-        self.ngeso = NationalGrid(self.cache_manager)
-        self.ons_nrs = ONS_NRS(self.cache_manager)
-        self.eurostat = Eurostat(self.cache_manager)
-        self.gmaps = GMaps(self.cache_manager, gmaps_key_file)
+        self.ngeso = NationalGrid(self.cache_manager, proxies=proxies, ssl_verify=ssl_verify)
+        self.ons_nrs = ONS_NRS(self.cache_manager, proxies=proxies, ssl_verify=ssl_verify)
+        self.eurostat = Eurostat(self.cache_manager, proxies=proxies, ssl_verify=ssl_verify)
+        self.gmaps = GMaps(
+            self.cache_manager, gmaps_key_file, proxies=proxies, ssl_verify=ssl_verify
+        )
         self.status_codes = {
             0: "Failed",
             1: "Full match with Code Point Open",
