@@ -2,7 +2,7 @@
 
 Geocode various geographical entities including postcodes and LLSOAs. Reverse-geocode to LLSOA or GSP/GNode.
 
-*Latest Version: 0.12.1*
+*Latest Version: 1.0.0*
 
 ## What is this repository for?
 
@@ -20,7 +20,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 
 ## How do I get set up?
 
-Developed and tested with Python 3.9, should work for 3.7+.
+Developed and tested with Python 3.12, should work for 3.11+.
 
 Make sure you have Git installed - [Download Git](https://git-scm.com/downloads)
 
@@ -64,9 +64,7 @@ This is especially useful if you are installing / running the library inside a c
 
 **Important**
 
-Note that this library makes use of the [Shapely library](https://pypi.org/project/Shapely/) from PyPi, which often does not install correctly on Windows machines due to some missing dependencies. If using Windows and you see an error like `OSError: [WinError 126] The specified module could not be found`, you should install Shapely from one of the unofficial binaries [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely) e.g.
-
-```>> pip install https://download.lfd.uci.edu/pythonlibs/s2jqpv5t/Shapely-1.7.0-cp37-cp37m-win_amd64.whl```
+Note that this library makes use of the [Shapely library](https://pypi.org/project/Shapely/) from PyPi, which often does not install correctly on Windows machines due to some missing dependencies. If using Windows and you see an error like `OSError: [WinError 126] The specified module could not be found`, you should install Shapely from one of the unofficial binaries [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely).
 
 All data required by this library is either packaged with the code or is downloaded at runtime from public APIs. Some data is subect to licenses and/or you may wish to manually update certain datasets (e.g. OS Code Point Open) - see [appendix](#Appendix).
 
@@ -161,6 +159,28 @@ REVERSE-GEOCODE TO NUTS2:
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
 
 When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and will likely be refined in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points/r/gsp_-_gnode_-_direct_connect_-_region_lookup) dataset on the ESO Data Portal). In testing, the `reverse_geocode_gsp()` method was able to allocate ~1 million random lat/lons to the correct GSP in average wall-clock time of around 300 seconds.
+
+#### Use with a proxy
+
+If your network configuration requires the use of a proxy server when downloading data from external URLs/APIs, you can specify the `proxies` parameter when instantiating the `Geocoder` class.
+
+e.g.
+
+```Python
+from geocode import Geocoder
+
+def main():
+    geocoder = Geocoder(
+        proxies=dict(
+            http="http://example.com",
+            https="http://example.com",
+        ),
+        ssl_verify=False
+    )
+```
+
+In some network configurations, it may also be necessary to disable SSL certificate checks, which you can do by setting `ssl_verify=False`. This is not recommended!
+
 
 ### Command Line Utilities
 
