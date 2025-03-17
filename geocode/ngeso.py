@@ -255,7 +255,7 @@ class NationalGrid:
         Return format needs some work, maybe switch to DataFrames in future release.
         """
         logging.debug(f"Reverse geocoding {len(latlons)} latlons to {version} GSP")
-        if self.gsp_regions_dict:
+        if self.gsp_regions_dict is None:
             _, self.gsp_regions_dict = self.load_gsp_boundaries(version=version)
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
