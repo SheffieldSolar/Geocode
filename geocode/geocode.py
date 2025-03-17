@@ -187,7 +187,7 @@ class Geocoder:
         """
         return self.geocode(lads, "lad")
 
-    def reverse_geocode_gsp(self, latlons):
+    def reverse_geocode_gsp(self, latlons, **kwargs):
         """
         Function to reverse geocode a collection of latlons into gsp regions.
         
@@ -195,8 +195,10 @@ class Geocoder:
         ----------
         `latlons` : iterable of strings
             Specific latlons to geocode to gsp regions.
+        `**kwargs`
+            Options to pass to the underlying reverse_geocode_gsp method.
         """
-        return self.reverse_geocode(latlons, "gsp")
+        return self.reverse_geocode(latlons, "gsp", **kwargs)
 
     def geocode_postcode(self, postcodes, method="cpo"):
         """
@@ -260,7 +262,10 @@ class Geocoder:
         """
         entity = entity.lower()
         if entity == "gsp":
-            return self.ngeso.reverse_geocode_gsp(latlons)
+            version = kwargs.get('version', '20250109')
+            if version not in ['20250109', '20220314']:
+                raise KeyError(f"Version {version} not supported for GSP boundaries.")
+            return self.ngeso.reverse_geocode_gsp(latlons, version)
         elif entity == "llsoa":
             datazones = kwargs.get("datazones", False)
             return self.ons_nrs.reverse_geocode_llsoa(latlons=latlons, datazones=datazones)

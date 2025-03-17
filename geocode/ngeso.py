@@ -195,7 +195,8 @@ class NationalGrid:
         return dno_regions, dno_names
 
     def reverse_geocode_gsp(self,
-                            latlons: List[Tuple[float, float]]
+                            latlons: List[Tuple[float, float]],
+                            version: str
                            ) -> Tuple[List[int], List[List[Dict]]]:
         """
         Reverse-geocode latitudes and longitudes to GSP using the 20220314 definitions.
@@ -204,6 +205,7 @@ class NationalGrid:
         ----------
         `latlons` : list of tuples
             A list of tuples containing (latitude, longitude).
+        `version` : string
 
         Returns
         -------
@@ -214,9 +216,12 @@ class NationalGrid:
         -----
         Return format needs some work, maybe switch to DataFrames in future release.
         """
-        logging.debug("Reverse geocoding %s latlons to 20220314 GSP", len(latlons))
+        logging.debug(f"Reverse geocoding {len(latlons)} latlons to {version} GSP")
         if self.gsp_regions is None:
-            self.gsp_regions = self._load_gsp_boundaries_20220314()
+            if version == "20220314":
+                self.gsp_regions = self._load_gsp_boundaries_20220314()
+            elif version == "20250109":
+                self.gsp_regions = self._load_gsp_boundaries_20250109()
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
         # Rather than re-project the region boundaries, re-project the input lat/lons
