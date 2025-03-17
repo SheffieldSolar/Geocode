@@ -262,7 +262,7 @@ class Geocoder:
         """
         entity = entity.lower()
         if entity == "gsp":
-            version = kwargs.get('version', '20250109')
+            version = kwargs.get("version", "20250109")
             return self.ngeso.reverse_geocode_gsp(latlons, version)
         elif entity == "llsoa":
             datazones = kwargs.get("datazones", False)
