@@ -39,7 +39,7 @@ class NationalGrid:
         self.gsp_boundaries_20220314_cache_file = "gsp_boundaries_20220314"
         self.gsp_boundaries_20181031_cache_file = "gsp_boundaries_20181031"
         self.dno_boundaries_cache_file = "dno_boundaries"
-        self.gsp_regions = None
+        self.gsp_regions_dict = None
         self.gsp_regions_20181031 = None
         self.dno_regions = None
         self.gsp_lookup_20181031 = None
@@ -83,6 +83,13 @@ class NationalGrid:
         """
         Load the 20250109 GSP / GNode boundaries, either from local cache if available, else fetch
         from ESO Data Portal API.
+
+        Returns
+        -------
+        gsp_regions: GeoPandas.GeoDataFrame
+            A geodataframe of MultiPolygons for the GSP boundaries.
+        gsp_regions_dict: Dict
+            GSP boundaries as a dictionary for backwards compatibility with utilities methods.
         """
         gsp_boundaries_cache_contents = self.cache_manager.retrieve(self.gsp_boundaries_20250109_cache_file)
         if gsp_boundaries_cache_contents is not None:
@@ -99,8 +106,8 @@ class NationalGrid:
         )
         if success:
             zip_file = io.BytesIO(api_response.content)
-            target_file = 'Proj_27700/GSP_regions_27700_20250109.geojson'
-            with ZipFile(zip_file, 'r') as zip_ref:  
+            target_file = "Proj_27700/GSP_regions_27700_20250109.geojson"
+            with ZipFile(zip_file, "r") as zip_ref:  
                 if target_file in zip_ref.namelist():
                     with zip_ref.open(target_file) as file:
                         raw = json.loads(file.read())
@@ -111,20 +118,28 @@ class NationalGrid:
             raise utils.GenericException("Encountered an error while extracting GSP region data from ESO "
                                    "API.")
         ### For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6
-        gsp_regions["bounds"] = gsp_regions.bounds.apply(tuple, axis=1)
-        gsp_regions_dict = gsp_regions.set_index(["GSPs", "GSPGroup"]).to_dict("index")
+        gsp_regions_ = gsp_regions.dissolve(by=["GSPs", "GSPGroup"])
+        gsp_regions_["bounds"] = gsp_regions_.bounds.apply(tuple, axis=1)
+        gsp_regions_dict = gsp_regions_.to_dict(orient="index")
         for r in gsp_regions_dict:
             gsp_regions_dict[r] = tuple(gsp_regions_dict[r].values())
         ######
         self.cache_manager.write(self.gsp_boundaries_20250109_cache_file, gsp_regions_dict)
         logging.info("20250109 GSP boundaries extracted and pickled to '%s'",
                      self.gsp_boundaries_20250109_cache_file)
-        return gsp_regions_dict
+        return gsp_regions, gsp_regions_dict
 
     def _load_gsp_boundaries_20220314(self):
         """
         Load the 20220314 GSP / GNode boundaries, either from local cache if available, else fetch
         from ESO Data Portal API.
+
+        Returns
+        -------
+        gsp_regions: GeoPandas.GeoDataFrame
+            A geodataframe of MultiPolygons for the GSP boundaries.
+        gsp_regions_dict: Dict
+            GSP boundaries as a dictionary for backwards compatibility with utilities methods.
         """
         gsp_boundaries_cache_contents = self.cache_manager.retrieve(self.gsp_boundaries_20220314_cache_file)
         if gsp_boundaries_cache_contents is not None:
@@ -156,7 +171,30 @@ class NationalGrid:
         self.cache_manager.write(self.gsp_boundaries_20220314_cache_file, gsp_regions_dict)
         logging.info("20220314 GSP boundaries extracted and pickled to '%s'",
                      self.gsp_boundaries_20220314_cache_file)
-        return gsp_regions_dict
+        return gsp_regions, gsp_regions_dict
+
+    def load_gsp_boundaries(self, version: str):
+        """
+        Load the GSP boundaries.
+
+        Parameters
+        ----------
+        `version` : str
+            The version of the GSP boundaries to load.
+
+        Returns
+        -------
+        gsp_regions: GeoPandas.GeoDataFrame
+            A geodataframe of MultiPolygons for the GSP boundaries.
+        gsp_regions_dict: Dict
+            GSP boundaries as a dictionary for backwards compatibility with utilities methods.
+        """
+        if version == "20250109":
+            return self._load_gsp_boundaries_20250109()
+        elif version == "20220314":
+            return self._load_gsp_boundaries_20220314()
+        else:
+            raise ValueError(f"GSP boundaries version {version} is not supported.")
 
     def _load_dno_boundaries(self):
         """
@@ -217,11 +255,7 @@ class NationalGrid:
         Return format needs some work, maybe switch to DataFrames in future release.
         """
         logging.debug(f"Reverse geocoding {len(latlons)} latlons to {version} GSP")
-        if self.gsp_regions is None:
-            if version == "20220314":
-                self.gsp_regions = self._load_gsp_boundaries_20220314()
-            elif version == "20250109":
-                self.gsp_regions = self._load_gsp_boundaries_20250109()
+        _, self.gsp_regions_dict = self.load_gsp_boundaries(version=version)
         lats = [l[0] for l in latlons]
         lons = [l[1] for l in latlons]
         # Rather than re-project the region boundaries, re-project the input lat/lons
@@ -229,7 +263,7 @@ class NationalGrid:
         logging.debug("Converting latlons to BNG")
         eastings, northings = utils.latlon2bng(lons, lats)
         logging.debug("Reverse geocoding")
-        results = utils.reverse_geocode(list(zip(northings, eastings)), self.gsp_regions)
+        results = utils.reverse_geocode(list(zip(northings, eastings)), self.gsp_regions_dict)
         return results
 
     def reverse_geocode_gsp_20181031(self,

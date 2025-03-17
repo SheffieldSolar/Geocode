@@ -263,8 +263,6 @@ class Geocoder:
         entity = entity.lower()
         if entity == "gsp":
             version = kwargs.get('version', '20250109')
-            if version not in ['20250109', '20220314']:
-                raise KeyError(f"Version {version} not supported for GSP boundaries.")
             return self.ngeso.reverse_geocode_gsp(latlons, version)
         elif entity == "llsoa":
             datazones = kwargs.get("datazones", False)
