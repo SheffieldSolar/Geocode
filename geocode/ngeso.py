@@ -6,12 +6,14 @@ Manage data from the NGESO Data Portal.
 - First Authored: 2022-10-19
 """
 
+import io
 import os
 import sys
 import pickle
 import logging
 import json
 from pathlib import Path
+from zipfile import ZipFile
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
 import pandas as pd
@@ -33,6 +35,7 @@ class NationalGrid:
         """The NGESO data manager for the Geocode class."""
         self.cache_manager = cache_manager
         self.gsp_lookup_20181031_cache_file = "gsp_lookup_20181031"
+        self.gsp_boundaries_20250109_cache_file = "gsp_boundaries_20250109"
         self.gsp_boundaries_20220314_cache_file = "gsp_boundaries_20220314"
         self.gsp_boundaries_20181031_cache_file = "gsp_boundaries_20181031"
         self.dno_boundaries_cache_file = "dno_boundaries"
@@ -75,6 +78,48 @@ class NationalGrid:
         self.cache_manager.write(self.gsp_lookup_20181031_cache_file, gsp_lookup)
         logging.info("GSP lookup extracted and pickled to '%s'", self.gsp_lookup_20181031_cache_file)
         return gsp_lookup
+    
+    def _load_gsp_boundaries_20250109(self):
+        """
+        Load the 20250109 GSP / GNode boundaries, either from local cache if available, else fetch
+        from ESO Data Portal API.
+        """
+        gsp_boundaries_cache_contents = self.cache_manager.retrieve(self.gsp_boundaries_20250109_cache_file)
+        if gsp_boundaries_cache_contents is not None:
+            logging.debug("Loading 20250109 GSP boundaries from cache ('%s')",
+                          self.gsp_boundaries_20250109_cache_file)
+            return gsp_boundaries_cache_contents
+        logging.info("Extracting the 20250109 GSP boundary data from NGESO's Data Portal API (this "
+                     "only needs to be done once)")
+        eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/d95e8c1b-9cd9-41dd-aacb-4b53b8c07c20/download/gsp_regions_20250109.zip"
+        success, api_response = utils.fetch_from_api(
+            eso_url,
+            proxies=self.proxies,
+            ssl_verify=self.ssl_verify
+        )
+        if success:
+            zip_file = io.BytesIO(api_response.content)
+            target_file = 'Proj_27700/GSP_regions_27700_20250109.geojson'
+            with ZipFile(zip_file, 'r') as zip_ref:  
+                if target_file in zip_ref.namelist():
+                    with zip_ref.open(target_file) as file:
+                        raw = json.loads(file.read())
+                        gsp_regions = gpd.GeoDataFrame.from_features(raw["features"],
+                                                                    crs=raw["crs"]["properties"]["name"])
+                        gsp_regions.geometry = gsp_regions.buffer(0)
+        else:
+            raise utils.GenericException("Encountered an error while extracting GSP region data from ESO "
+                                   "API.")
+        ### For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6
+        gsp_regions["bounds"] = gsp_regions.bounds.apply(tuple, axis=1)
+        gsp_regions_dict = gsp_regions.set_index(["GSPs", "GSPGroup"]).to_dict("index")
+        for r in gsp_regions_dict:
+            gsp_regions_dict[r] = tuple(gsp_regions_dict[r].values())
+        ######
+        self.cache_manager.write(self.gsp_boundaries_20250109_cache_file, gsp_regions_dict)
+        logging.info("20250109 GSP boundaries extracted and pickled to '%s'",
+                     self.gsp_boundaries_20250109_cache_file)
+        return gsp_regions_dict
 
     def _load_gsp_boundaries_20220314(self):
         """
