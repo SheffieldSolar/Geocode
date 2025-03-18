@@ -99,7 +99,8 @@ class geocodeTestCase(unittest.TestCase):
             (55.950095, -3.178485)
         ]
         with Geocoder() as geo:
-            assert_equal(geo.reverse_geocode_gsp(latlons), gsp_regions)
+            assert_equal(geo.reverse_geocode_gsp(latlons, version="20220314"), gsp_regions)
+            assert_equal(geo.reverse_geocode_gsp(latlons, version="20250109"), gsp_regions)
 
     def test_geocode_constituency(self):
         """
