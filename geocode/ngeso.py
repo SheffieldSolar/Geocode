@@ -124,7 +124,7 @@ class NationalGrid:
         for r in gsp_regions_dict:
             gsp_regions_dict[r] = tuple(gsp_regions_dict[r].values())
         ######
-        self.cache_manager.write(self.gsp_boundaries_20250109_cache_file, (gsp_regions, gsp_regions_dict))
+        self.cache_manager.write(self.gsp_boundaries_20250109_cache_file, gsp_regions_dict)
         logging.info("20250109 GSP boundaries extracted and pickled to '%s'",
                      self.gsp_boundaries_20250109_cache_file)
         return gsp_regions, gsp_regions_dict
@@ -168,7 +168,7 @@ class NationalGrid:
         for r in gsp_regions_dict:
             gsp_regions_dict[r] = tuple(gsp_regions_dict[r].values())
         ######
-        self.cache_manager.write(self.gsp_boundaries_20220314_cache_file, (gsp_regions, gsp_regions_dict))
+        self.cache_manager.write(self.gsp_boundaries_20220314_cache_file, gsp_regions_dict)
         logging.info("20220314 GSP boundaries extracted and pickled to '%s'",
                      self.gsp_boundaries_20220314_cache_file)
         return gsp_regions, gsp_regions_dict
