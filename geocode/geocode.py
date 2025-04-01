@@ -109,11 +109,12 @@ class Geocoder:
         """
         return self.ngeso._load_dno_boundaries()
 
-    def get_gsp_regions(self):
+    def get_gsp_regions(self, **kwargs):
         """
-        Get the 20220314 GSP / GNode boundaries from the ESO Data Portal API.
+        Get the GSP / GNode boundaries from the ESO Data Portal API.
         """
-        return self.ngeso._load_gsp_boundaries_20220314()
+        version = kwargs.get("version", "20250109")
+        return self.ngeso.load_gsp_boundaries(version)
 
     def get_llsoa_boundaries(self):
         """
