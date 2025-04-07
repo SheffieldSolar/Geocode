@@ -50,7 +50,8 @@ class NationalGrid:
         """
         Function to setup lookup files.
         """
-        self._load_gsp_boundaries_20220314()
+        self.load_gsp_boundaries(version="20220314")
+        self.load_gsp_boundaries(version="20250109")
         self._load_dno_boundaries()
 
     def _load_gsp_lookup_20181031(self):
