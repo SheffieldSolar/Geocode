@@ -52,6 +52,7 @@ class NationalGrid:
         """
         self.load_gsp_boundaries("20220314")
         self.load_gsp_boundaries("20250109")
+        self._load_dno_boundaries()
 
     def _load_gsp_lookup_20181031(self):
         """Load the lookup of Region <-> GSP <-> GNode."""
