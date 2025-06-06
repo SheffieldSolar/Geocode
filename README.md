@@ -158,7 +158,7 @@ REVERSE-GEOCODE TO NUTS2:
 
 In the above example, `postcodes` and `addresses` are lists of strings, but it should be fine to use any iterator such as Numpy arrays or Pandas DataFrame columns, although the `geocode()` method will still return a list of tuples.
 
-When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and will likely be refined in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points/r/gsp_-_gnode_-_direct_connect_-_region_lookup) dataset on the ESO Data Portal). In testing, the `reverse_geocode_gsp()` method was able to allocate ~1 million random lat/lons to the correct GSP in average wall-clock time of around 300 seconds.
+When reverse-geocoding to GSP, the `reverse_geocode_gsp()` method returns both a list of Region IDs and a corresponding list of GSP / GNodes etc. Since the relationship between Region:GSP:GNode is theoretically MANY:MANY:MANY, the second object returned is a list of lists of dicts. This is rather clunky and will likely be refined in a future release. An alternative use case could disregard this second return object and instead make use of the `Geocoder.gsp_lookup` instance attribute - this is a Pandas DataFrame giving the full lookup between Regions / GSPs / GNodes / DNO License Areas (i.e. [this](https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points/gsp_-_gnode_-_direct_connect_-_region_lookup_20181031) dataset on the ESO Data Portal). In testing, the `reverse_geocode_gsp()` method was able to allocate ~1 million random lat/lons to the correct GSP in average wall-clock time of around 300 seconds.
 
 #### Use with a proxy
 
@@ -365,11 +365,11 @@ The Geocode library makes use of the Westminster Parliamentary Constituencies (D
 
 ### NGESO Data Portal
 
-The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://data.nationalgrideso.com/system/gis-boundaries-for-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
+The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
 
 Supported by National Grid ESO Open Data
 
-Subject to [NGESO Open Licence](https://data.nationalgrideso.com/licence)
+Subject to [NGESO Open Licence](https://www.neso.energy/data-portal/neso-open-licence)
 
 To update your locally cached boundary definitions, clear your local cache:
 
