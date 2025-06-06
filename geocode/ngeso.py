@@ -63,7 +63,7 @@ class NationalGrid:
             return gsp_lookup_cache_contents
         logging.info("Extracting the GSP lookup data from NGESO's Data Portal API (this only needs "
                      "to be done once)")
-        eso_url = "http://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/bbe2cc72-a6c6-46e6-8f4e-48b879467368/download/gsp_gnode_directconnect_region_lookup.csv"
+        eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/bbe2cc72-a6c6-46e6-8f4e-48b879467368/download/gsp_gnode_directconnect_region_lookup.csv"
         success, api_response = utils.fetch_from_api(
             eso_url,
             proxies=self.proxies,
@@ -149,7 +149,7 @@ class NationalGrid:
             return gsp_boundaries_cache_contents
         logging.info("Extracting the 20220314 GSP boundary data from NGESO's Data Portal API (this "
                      "only needs to be done once)")
-        eso_url = "https://data.nationalgrideso.com/backend/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson"
+        eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson"
         success, api_response = utils.fetch_from_api(
             eso_url,
             proxies=self.proxies,
@@ -209,7 +209,7 @@ class NationalGrid:
             return dno_boundaries_cache_contents
         logging.info("Extracting the DNO License Area boundary data from NGESO's Data Portal API "
                      "(this only needs to be done once)")
-        eso_url = "http://data.nationalgrideso.com/backend/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
+        eso_url = "https://api.neso.energy/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
         success, api_response = utils.fetch_from_api(
             eso_url,
             proxies=self.proxies,
