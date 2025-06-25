@@ -67,6 +67,8 @@ class CodePointOpen:
                     cpo = pd.concat([cpo, data]) if cpo is not None else data
         cpo["Postcode"] = cpo["Postcode"].str.replace(" ", "", regex=False)
         cpo["Postcode"] = cpo["Postcode"].str.upper()
+        # remove all rows with 0 Eastings or Northings
+        cpo = cpo[~((cpo["Eastings"] == 0) | (cpo["Northings"] == 0))]
         nn_indices = cpo["Eastings"].notnull() & cpo["Positional_quality_indicator"] < 90
         lons, lats = bng2latlon(cpo.loc[nn_indices, ("Eastings")].to_numpy(),
                                 cpo.loc[nn_indices, ("Northings")].to_numpy())
