@@ -47,7 +47,7 @@ optional arguments:
   --setup SETUP [SETUP ...]
                         Force download all datasets to local cache (useful if running
                         inside a Docker container i.e. run this as part of image build).
-                        Possible values are 'ngeso', 'cpo', 'ons', 'eurostat' or 'all'.
+                        Possible values are 'neso', 'cpo', 'ons', 'eurostat' or 'all'.
   --load-cpo-zip </path/to/zip-file>
                         Load the Code Point Open data from a local zip file.
   --load-gmaps-key <gmaps-api-key>
@@ -363,13 +363,13 @@ The Geocode library makes use of the Westminster Parliamentary Constituencies (D
 
 &dagger;Contains public sector information licensed under the Open Government Licence v3.0.
 
-### NGESO Data Portal
+### NESO Data Portal
 
 The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
 
 Supported by National Grid ESO Open Data
 
-Subject to [NGESO Open Licence](https://www.neso.energy/data-portal/neso-open-licence)
+Subject to [NESO Open Licence](https://www.neso.energy/data-portal/neso-open-licence)
 
 To update your locally cached boundary definitions, clear your local cache:
 
