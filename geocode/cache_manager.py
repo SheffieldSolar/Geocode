@@ -16,10 +16,12 @@ from typing import Any, Optional
 
 SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
-from . version import __version__
+from .version import __version__
+
 
 class CacheManager:
     """Cache Python variables to files using Pickle."""
+
     def __init__(self, cache_dir: Optional[Path] = None):
         """
         Cache Python variables to files using Pickle.
@@ -30,9 +32,13 @@ class CacheManager:
             Path to a directory to use for writing cache files. If not set, or set to None, default
             location will be `os.path.join(os.path.dirname(os.path.realpath(__file__)), "cache")`.
         """
-        self.cache_dir = SCRIPT_DIR.joinpath("cache") if cache_dir is None else cache_dir
+        self.cache_dir = (
+            SCRIPT_DIR.joinpath("cache") if cache_dir is None else cache_dir
+        )
         if not self.cache_dir.is_dir():
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), self.cache_dir)
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), self.cache_dir
+            )
         self.version_string = __version__.replace(".", "-")
 
     def _get_filename(self, label):
@@ -77,9 +83,9 @@ class CacheManager:
         with open(cache_file, "wb") as pickle_fid:
             pickle.dump(data, pickle_fid)
 
-    def clear(self,
-              delete_gmaps_cache: bool = False,
-              old_versions_only: bool = False) -> None:
+    def clear(
+        self, delete_gmaps_cache: bool = False, old_versions_only: bool = False
+    ) -> None:
         """
         Clear all cache files from the cache directory including from old versions.
 
@@ -92,8 +98,11 @@ class CacheManager:
             Optional boolean deciding whether or not to clear all cache files or just those
             corresponding to previous versions of the Geocode library. Defaults to False.
         """
-        logging.debug("Deleting cache files (delete_gmaps_cache=%s, old_versions_only=%s)",
-                      delete_gmaps_cache, old_versions_only)
+        logging.debug(
+            "Deleting cache files (delete_gmaps_cache=%s, old_versions_only=%s)",
+            delete_gmaps_cache,
+            old_versions_only,
+        )
         cache_files = self.cache_dir.glob("*.p")
         for cache_file in cache_files:
             if not delete_gmaps_cache and "gmaps" in cache_file.name:
@@ -108,4 +117,3 @@ class CacheManager:
             except:
                 raise Exception("Error deleting cache file: ", cache_file)
             logging.debug("Deleted '%s'", cache_file)
-
