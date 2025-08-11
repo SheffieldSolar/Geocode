@@ -10,7 +10,7 @@ Geocode various geographical entities including postcodes and LLSOAs. Reverse-ge
 * Use ONS & NRS LLSOA Population Weighted Centroids to geocode Lower Layer Super Output Areas.
 * Use GIS data from data.gov.uk to geocode GB constituencies based on geospatial centroid.
 * Use GIS boundaries data from ONS and NRS to reverse-geocode lat/lon to LLSOA.
-* Use GIS data from National Grid ESO's data portal to reverse-geocode to GSP / GNode.
+* Use GIS data from the National Energy System Operator's (NESO) data portal to reverse-geocode to a GSP or GNode.
 * Use GIS boudnaries from the Europa/Eurostats API to reverse-geocode to NUTS regions.
 
 ## Benefits
@@ -365,9 +365,9 @@ The Geocode library makes use of the Westminster Parliamentary Constituencies (D
 
 ### NESO Data Portal
 
-The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to National Grid ESO's Data Portal - see [here](https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
+The Geocode library makes use of GSP/GNode GIS boundaries developed by Sheffield Solar. In May 2020, these region definitions were uploaded to NESO's Data Portal - see [here](https://www.neso.energy/data-portal/gis-boundaries-gb-grid-supply-points). The first time you make use of the `Geocoder.reverse_geocode_gsp()` method, the GIS data is downloaded from the Data Portal API at runtime.
 
-Supported by National Grid ESO Open Data
+Supported by NESO Open Data
 
 Subject to [NESO Open Licence](https://www.neso.energy/data-portal/neso-open-licence)
 
