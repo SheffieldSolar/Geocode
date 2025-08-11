@@ -21,7 +21,7 @@ import pyproj
 
 from .utilities import GenericException
 from .cpo import CodePointOpen
-from .ngeso import NationalGrid
+from .neso import NationalGrid
 from .ons_nrs import ONS_NRS
 from .eurostat import Eurostat
 from .gmaps import GMaps
@@ -64,7 +64,7 @@ class Geocoder:
         self.cache_manager = CacheManager(cache_dir)
         self.cache_manager.clear(delete_gmaps_cache=False, old_versions_only=True)
         self.cpo = CodePointOpen(self.cache_manager)
-        self.ngeso = NationalGrid(
+        self.neso = NationalGrid(
             self.cache_manager, proxies=proxies, ssl_verify=ssl_verify
         )
         self.ons_nrs = ONS_NRS(
@@ -93,11 +93,11 @@ class Geocoder:
         self.gmaps.flush_cache()
 
     def force_setup(
-        self, ngeso_setup=True, cpo_setup=True, ons_setup=True, eurostat_setup=True
+        self, neso_setup=True, cpo_setup=True, ons_setup=True, eurostat_setup=True
     ):
         """Download all data and setup caches."""
-        if ngeso_setup:
-            self.ngeso.force_setup()
+        if neso_setup:
+            self.neso.force_setup()
         if cpo_setup:
             self.cpo.force_setup()
         if ons_setup:
@@ -119,14 +119,14 @@ class Geocoder:
             Dict whose keys are the region IDs and whose values are a tuple containing:
             (Name, LongName).
         """
-        return self.ngeso._load_dno_boundaries()
+        return self.neso._load_dno_boundaries()
 
     def get_gsp_regions(self, **kwargs):
         """
         Get the GSP / GNode boundaries from the ESO Data Portal API.
         """
         version = kwargs.get("version", "20250109")
-        return self.ngeso.load_gsp_boundaries(version)
+        return self.neso.load_gsp_boundaries(version)
 
     def get_llsoa_boundaries(self):
         """
@@ -278,7 +278,7 @@ class Geocoder:
         entity = entity.lower()
         if entity == "gsp":
             version = kwargs.get("version", "20250109")
-            return self.ngeso.reverse_geocode_gsp(latlons, version)
+            return self.neso.reverse_geocode_gsp(latlons, version)
         elif entity == "llsoa":
             datazones = kwargs.get("datazones", False)
             return self.ons_nrs.reverse_geocode_llsoa(
@@ -385,7 +385,7 @@ def parse_options():
         help="Force download all datasets to local cache (useful "
         "if running inside a Docker container i.e. run this "
         "as part of image build). Possible values are "
-        "'ngeso', 'cpo', 'ons', 'eurostat' or 'all'.",
+        "'neso', 'cpo', 'ons', 'eurostat' or 'all'.",
     )
     parser.add_argument(
         "--load-cpo-zip",
@@ -411,7 +411,7 @@ def parse_options():
 
     def handle_options(options):
         if options.setup is not None:
-            valid_options = ["ngeso", "cpo", "ons", "eurostat", "all"]
+            valid_options = ["neso", "cpo", "ons", "eurostat", "all"]
             options.setup = list(map(str.lower, options.setup))
             if any(s not in valid_options for s in options.setup):
                 raise ValueError(
@@ -527,14 +527,14 @@ def main():
             if geocoder.gmaps._load_key() == options.gmaps_key:
                 logging.info("GMaps key saved to '%s'", geocoder.gmaps.gmaps_key_file)
     if options.setup is not None:
-        ngeso_setup = "ngeso" in options.setup or "all" in options.setup
+        neso_setup = "neso" in options.setup or "all" in options.setup
         cpo_setup = "cpo" in options.setup or "all" in options.setup
         ons_setup = "ons" in options.setup or "all" in options.setup
         eurostat_setup = "eurostat" in options.setup or "all" in options.setup
         logging.info("Running forced setup")
         with Geocoder() as geocoder:
             geocoder.force_setup(
-                ngeso_setup=ngeso_setup,
+                neso_setup=neso_setup,
                 cpo_setup=cpo_setup,
                 ons_setup=ons_setup,
                 eurostat_setup=eurostat_setup,
