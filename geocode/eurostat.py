@@ -114,24 +114,6 @@ class Eurostat:
         )
         return nuts_regions
 
-    def _load_nuts_boundaries(self, level, year=2021):
-        """
-        For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6
-
-        Load the NUTS boundaries, either from local cache if available, else fetch from Eurostat
-        API.
-        """
-        nuts_gdf = self.load_nuts_boundaries(level, year)
-        nuts_gdf["bounds"] = nuts_gdf.bounds.apply(tuple, axis=1)
-        nuts_dict = (
-            nuts_gdf[["NUTS_ID", "geometry", "bounds"]]
-            .set_index("NUTS_ID")
-            .to_dict("index")
-        )
-        for r in nuts_dict:
-            nuts_dict[r] = tuple(nuts_dict[r].values())
-        return nuts_dict
-
     def reverse_geocode_nuts(
         self,
         latlons: List[Tuple[float, float]],
@@ -161,7 +143,7 @@ class Eurostat:
             do not fall inside a NUTS boundary will return None.
         """
         if self.nuts_regions[(level, year)] is None:
-            self.nuts_regions[(level, year)] = self._load_nuts_boundaries(
+            self.nuts_regions[(level, year)] = self.load_nuts_boundaries(
                 level=level, year=year
             )
         results = utils.reverse_geocode(
