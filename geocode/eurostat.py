@@ -137,6 +137,7 @@ class Eurostat:
         latlons: List[Tuple[float, float]],
         level: Literal[0, 1, 2, 3],
         year: Literal[2003, 2006, 2010, 2013, 2016, 2021] = 2021,
+        **kwargs,
     ) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to NUTS regions.
@@ -150,6 +151,8 @@ class Eurostat:
         `year` : int
             Specify the year of NUTS regulation, must be one of [2003,2006,2010,2013,2016,2021],
             defaults to 2021.
+        `**kwargs` : dict
+            Options to pass to the underlying utilities.reverse_geocode method.
 
         Returns
         -------
@@ -161,5 +164,7 @@ class Eurostat:
             self.nuts_regions[(level, year)] = self._load_nuts_boundaries(
                 level=level, year=year
             )
-        results = utils.reverse_geocode(latlons, self.nuts_regions[(level, year)])
+        results = utils.reverse_geocode(
+            latlons, self.nuts_regions[(level, year)], **kwargs
+        )
         return results

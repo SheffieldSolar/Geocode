@@ -284,7 +284,7 @@ class NationalGrid:
         return dno_regions, dno_names
 
     def reverse_geocode_gsp(
-        self, latlons: List[Tuple[float, float]], version: str
+        self, latlons: List[Tuple[float, float]], version: str, **kwargs
     ) -> Tuple[List[int], List[List[Dict]]]:
         """
         Reverse-geocode latitudes and longitudes to GSP using the 20220314 definitions.
@@ -294,6 +294,8 @@ class NationalGrid:
         `latlons` : list of tuples
             A list of tuples containing (latitude, longitude).
         `version` : string
+        `kwargs`: dict
+            Options to pass to the underlying utilities.reverse_geocode method.
 
         Returns
         -------
@@ -315,7 +317,7 @@ class NationalGrid:
         eastings, northings = utils.latlon2bng(lons, lats)
         logging.debug("Reverse geocoding")
         results = utils.reverse_geocode(
-            list(zip(northings, eastings)), self.gsp_regions_dict
+            list(zip(northings, eastings)), self.gsp_regions_dict, **kwargs
         )
         return results
 

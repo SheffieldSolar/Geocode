@@ -146,7 +146,7 @@ class Geocoder:
         """
         return self.geocode(llsoa_boundaries, "llsoa")
 
-    def reverse_geocode_llsoa(self, latlons, dz=True):
+    def reverse_geocode_llsoa(self, latlons, dz=True, **kwargs):
         """
         Function to reverse geocode a collection of latlons into llsoa boundaries.
 
@@ -156,14 +156,21 @@ class Geocoder:
             Specific latlons to geocode to llsoa boundaries.
         `dz` : Boolean
             Indication whether to consider datazones
+        `**kwargs`
+            Options to pass to the underlying utilities.reverse_geocode method.
+
+        See Also
+        --------
+        utlities.reverse_geocode : for more information on the kwargs.
         """
-        return self.reverse_geocode(latlons, "llsoa", datazones=dz)
+        return self.reverse_geocode(latlons, "llsoa", datazones=dz, **kwargs)
 
     def reverse_geocode_nuts(
         self,
         latlons: List[Tuple[float, float]],
         level: Literal[0, 1, 2, 3],
         year: Literal[2003, 2006, 2010, 2013, 2016, 2021] = 2021,
+        **kwargs: Optional[Dict],
     ) -> List[str]:
         """
         Function to reverse geocode a collection of latlons into NUTS boundaries.
@@ -177,8 +184,14 @@ class Geocoder:
         `year` : int
             Specify the year of NUTS regulation, must be one of [2003,2006,2010,2013,2016,2021],
             defaults to 2021.
+        `**kwargs`
+            Options to pass to the underlying utilities.reverse_geocode method.
+
+        See Also
+        --------
+        utlities.reverse_geocode : for more information on the kwargs.
         """
-        return self.reverse_geocode(latlons, "nuts", level=level, year=year)
+        return self.reverse_geocode(latlons, "nuts", level=level, year=year, **kwargs)
 
     def geocode_constituency(self, constituencies):
         """
@@ -211,7 +224,11 @@ class Geocoder:
         `latlons` : iterable of strings
             Specific latlons to geocode to gsp regions.
         `**kwargs`
-            Options to pass to the underlying reverse_geocode_gsp method.
+            Options to pass to the underlying utilities.reverse_geocode method.
+
+        See Also
+        --------
+        utlities.reverse_geocode : for more information on the kwargs.
         """
         return self.reverse_geocode(latlons, "gsp", **kwargs)
 
@@ -273,23 +290,16 @@ class Geocoder:
         `entity` : string
             Specify the entity type to Geocode from i.e., gsp or llsoa.
         `**kwargs`
-            Options to pass to the underlying reverse-geocode method.
+            Options to pass to the underlying reverse-geocode method, eg., `max_distance`
         """
         entity = entity.lower()
         if entity == "gsp":
             version = kwargs.get("version", "20250109")
-            return self.ngeso.reverse_geocode_gsp(latlons, version)
+            return self.ngeso.reverse_geocode_gsp(latlons, version, **kwargs)
         elif entity == "llsoa":
-            datazones = kwargs.get("datazones", False)
-            return self.ons_nrs.reverse_geocode_llsoa(
-                latlons=latlons, datazones=datazones
-            )
+            return self.ons_nrs.reverse_geocode_llsoa(latlons=latlons, **kwargs)
         elif entity == "nuts":
-            level = kwargs.get("level")
-            year = kwargs.get("year", 2021)
-            return self.eurostat.reverse_geocode_nuts(
-                latlons=latlons, level=level, year=year
-            )
+            return self.eurostat.reverse_geocode_nuts(latlons=latlons, **kwargs)
         else:
             raise GenericException(f"Entity '{entity}' is not supported.")
 

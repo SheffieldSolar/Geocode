@@ -257,7 +257,7 @@ class ONS_NRS:
         return results
 
     def reverse_geocode_llsoa(
-        self, latlons: List[Tuple[float, float]], datazones: bool = False
+        self, latlons: List[Tuple[float, float]], datazones: bool = False, **kwargs
     ) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to LLSOA.
@@ -278,7 +278,7 @@ class ONS_NRS:
         """
         if self.llsoa_regions is None:
             self.llsoa_regions = self._load_llsoa_boundaries()
-        results = utils.reverse_geocode(latlons, self.llsoa_regions)
+        results = utils.reverse_geocode(latlons, self.llsoa_regions, **kwargs)
         if datazones:
             if self.dz_lookup is None:
                 self.dz_lookup = self._load_datazone_lookup()
