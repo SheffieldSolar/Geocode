@@ -1,5 +1,5 @@
 """
-Manage data from the NGESO Data Portal.
+Manage data from the NESO Data Portal.
 
 - Ethan Jones <ejones18@sheffield.ac.uk>
 - Jamie Taylor <jamie.taylor@sheffield.ac.uk>
@@ -34,10 +34,10 @@ SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 
 class NationalGrid:
-    """The NGESO data manager for the Geocode class."""
+    """The NESO data manager for the Geocode class."""
 
     def __init__(self, cache_manager, proxies=None, ssl_verify=True):
-        """The NGESO data manager for the Geocode class."""
+        """The NESO data manager for the Geocode class."""
         self.cache_manager = cache_manager
         self.gsp_lookup_20181031_cache_file = "gsp_lookup_20181031"
         self.gsp_boundaries_20250109_cache_file = "gsp_boundaries_20250109"
@@ -71,7 +71,7 @@ class NationalGrid:
             )
             return gsp_lookup_cache_contents
         logging.info(
-            "Extracting the GSP lookup data from NGESO's Data Portal API (this only needs "
+            "Extracting the GSP lookup data from NESO's Data Portal API (this only needs "
             "to be done once)"
         )
         eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/bbe2cc72-a6c6-46e6-8f4e-48b879467368/download/gsp_gnode_directconnect_region_lookup.csv"
@@ -117,7 +117,7 @@ class NationalGrid:
             )
             return gsp_boundaries_cache_contents
         logging.info(
-            "Extracting the 20250109 GSP boundary data from NGESO's Data Portal API (this "
+            "Extracting the 20250109 GSP boundary data from NESO's Data Portal API (this "
             "only needs to be done once)"
         )
         eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/d95e8c1b-9cd9-41dd-aacb-4b53b8c07c20/download/gsp_regions_20250109.zip"
@@ -177,7 +177,7 @@ class NationalGrid:
             )
             return gsp_boundaries_cache_contents
         logging.info(
-            "Extracting the 20220314 GSP boundary data from NGESO's Data Portal API (this "
+            "Extracting the 20220314 GSP boundary data from NESO's Data Portal API (this "
             "only needs to be done once)"
         )
         eso_url = "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/08534dae-5408-4e31-8639-b579c8f1c50b/download/gsp_regions_20220314.geojson"
@@ -247,7 +247,7 @@ class NationalGrid:
             )
             return dno_boundaries_cache_contents
         logging.info(
-            "Extracting the DNO License Area boundary data from NGESO's Data Portal API "
+            "Extracting the DNO License Area boundary data from NESO's Data Portal API "
             "(this only needs to be done once)"
         )
         eso_url = "https://api.neso.energy/dataset/0e377f16-95e9-4c15-a1fc-49e06a39cfa0/resource/e96db306-aaa8-45be-aecd-65b34d38923a/download/dno_license_areas_20200506.geojson"
