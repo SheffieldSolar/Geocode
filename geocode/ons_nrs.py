@@ -157,7 +157,8 @@ class ONS_NRS:
                     for page in pages
                     for feature in page["features"]
                 ],
-            }
+            },
+            crs="EPSG:4326",
         )
 
     def _load_llsoa_boundaries_scots_regions(self):
@@ -175,7 +176,8 @@ class ONS_NRS:
                                 shape(sr.shape.__geo_interface__).buffer(0)
                                 for sr in sf.shapeRecords()
                             ],
-                        }
+                        },
+                        crs="EPSG:4326",
                     )
 
     def _load_llsoa_boundaries(self):
@@ -302,7 +304,11 @@ class ONS_NRS:
         """
         if self.llsoa_regions is None:
             self.llsoa_regions = self._load_llsoa_boundaries()
-        results = utils.reverse_geocode(latlons, self.llsoa_regions, **kwargs)
+        results = utils.reverse_geocode(
+            latlons,
+            self.llsoa_regions.rename({"llsoa11cd": "region_id"}, axis=1),
+            **kwargs
+        )
         if datazones:
             if self.dz_lookup is None:
                 self.dz_lookup = self._load_datazone_lookup()

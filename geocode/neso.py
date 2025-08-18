@@ -286,15 +286,11 @@ class NationalGrid:
         logging.debug(f"Reverse geocoding {len(latlons)} latlons to {version} GSP")
         if self.gsp_regions is None:
             self.gsp_regions = self.load_gsp_boundaries(version=version)
-        lats = [l[0] for l in latlons]
-        lons = [l[1] for l in latlons]
-        # Rather than re-project the region boundaries, re-project the input lat/lons
-        # (easier, but slightly slower if reverse-geocoding a lot)
-        logging.debug("Converting latlons to BNG")
-        eastings, northings = utils.latlon2bng(lons, lats)
         logging.debug("Reverse geocoding")
         results = utils.reverse_geocode(
-            list(zip(northings, eastings)), self.gsp_regions, **kwargs
+            latlons,
+            self.gsp_regions.rename({"GSPs": "region_id"}, axis=1),
+            **kwargs,
         )
         return results
 

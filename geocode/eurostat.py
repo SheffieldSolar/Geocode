@@ -147,6 +147,8 @@ class Eurostat:
                 level=level, year=year
             )
         results = utils.reverse_geocode(
-            latlons, self.nuts_regions[(level, year)], **kwargs
+            latlons,
+            self.nuts_regions[(level, year)].rename({"NUTS_ID": "region_id"}, axis=1),
+            **kwargs,
         )
         return results

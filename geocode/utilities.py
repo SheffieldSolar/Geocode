@@ -244,11 +244,8 @@ def reverse_geocode(
     ----------
     `coords` : list of tuples
         A list of tuples containing (y, x).
-    `regions` : dict
-        Dict whose keys are the region IDs and whose values are a tuple containing:
-        (region_boundary, region_bounds). The region boundary must be a Shapely
-        Polygon/MultiPolygon and the bounds should be a tuple containing (xmin, ymin, xmax,
-        ymax).
+    `regions` : gpd.GeoDataFrame
+        A GeoDataFrame containing the regions to reverse-geocode against. The GeoDataFrame must have a crs.
     `max_distance` : float, optional
         The maximum distance in meters to search for the nearest region if the coords do not fall
         within a region boundary. If None, no nearest search will be performed.
@@ -262,17 +259,9 @@ def reverse_geocode(
     x_coords, y_coords = zip(*[(x, y) for y, x in coords])
     coords = gpd.GeoDataFrame(
         {"geometry": gpd.points_from_xy(x_coords, y_coords)}, crs="EPSG:4326"
-    )
-    region_ids = list(regions.keys())
-    regions = gpd.GeoDataFrame(
-        {
-            "region_id": region_ids,
-            "geometry": [regions[reg_id][0] for reg_id in region_ids],
-        },
-        crs="EPSG:4326",
-    )
+    ).to_crs(regions.crs)
     regions.set_index("region_id", inplace=True)
-    joined = regions.sjoin(coords, how="right")
+    joined = regions.sjoin(coords, how="right").to_crs(regions.crs)
     # Perform sjoin nearest on coords that wasn't reverse-geocoded to a region
     na_geolocations = joined[joined["region_id"].isna()].copy()
     if not na_geolocations.empty and max_distance is not None:
