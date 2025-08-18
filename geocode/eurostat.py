@@ -46,7 +46,7 @@ class Eurostat:
         Function to setup all lookup files.
         """
         for l in range(0, 4):
-            self._load_nuts_boundaries(l)
+            self.load_nuts_boundaries(l)
 
     def load_nuts_boundaries(
         self,
