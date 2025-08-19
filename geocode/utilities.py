@@ -12,19 +12,9 @@ import requests
 import json
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
+import geopandas as gpd
+import pandas as pd
 import pyproj
-
-try:
-    from shapely.geometry import shape, Point
-    from shapely.ops import unary_union
-
-    SHAPELY_AVAILABLE = True
-except ImportError:
-    logging.warning(
-        "Failed to import Shapely library - you will not be able to reverse-geocode! "
-        "See notes in the README about installing Shapely on Windows machines."
-    )
-    SHAPELY_AVAILABLE = False
 
 
 class GenericException(Exception):
@@ -245,8 +235,7 @@ def geocode_one(
 def reverse_geocode(
     coords: List[Tuple[float, float]],
     regions: Dict,
-    show_progress: bool = None,
-    prefix: str = None,
+    max_distance: Optional[float] = None,
 ) -> List:
     """
     Generic method to reverse-geocode x, y coordinates to regions.
@@ -255,47 +244,41 @@ def reverse_geocode(
     ----------
     `coords` : list of tuples
         A list of tuples containing (y, x).
-    `regions` : dict
-        Dict whose keys are the region IDs and whose values are a tuple containing:
-        (region_boundary, region_bounds). The region boundary must be a Shapely
-        Polygon/MultiPolygon and the bounds should be a tuple containing (xmin, ymin, xmax,
-        ymax).
+    `regions` : gpd.GeoDataFrame
+        A GeoDataFrame containing the regions to reverse-geocode against. The GeoDataFrame must have a crs.
+    `max_distance` : float, optional
+        The maximum distance in meters to search for the nearest region if the coords do not fall
+        within a region boundary. If None, no nearest search will be performed.
 
     Returns
     -------
     list
         The region IDs that the input coords fall within. Any coords which do not fall inside an
         LLSOA boundary will return None.
-
-    Notes
-    -----
-    The region bounds are used to improve performance by first scanning for potential region
-    candidates using a simple inequality, since the performance of
-    `Shapely.MultiPolygon.contains()` is not great.
     """
-    if not SHAPELY_AVAILABLE:
-        raise utilities.GenericException(
-            "Geocode was unable to import the Shapely library, follow "
-            "the installation instructions at "
-            "https://github.com/SheffieldSolar/Geocode"
+    x_coords, y_coords = zip(*[(x, y) for y, x in coords])
+    coords = gpd.GeoDataFrame(
+        {"geometry": gpd.points_from_xy(x_coords, y_coords)}, crs="EPSG:4326"
+    ).to_crs(regions.crs)
+    regions.set_index("region_id", inplace=True)
+    joined = regions.sjoin(coords, how="right").to_crs(regions.crs)
+    # Perform sjoin nearest on coords that wasn't reverse-geocoded to a region
+    na_geolocations = joined[joined["region_id"].isna()].copy()
+    if not na_geolocations.empty and max_distance is not None:
+        logging.info(
+            f"Couldn't reverse-geocode {na_geolocations.shape[0]} geolocation(s) using sjoin - "
+            f"Using nearest join to reverse-geocode within {max_distance} meters."
         )
-    results = []
-    tot = len(coords)
-    for i, (y, x) in enumerate(coords):
-        success = False
-        possible_matches = []
-        for reg_id in regions:
-            bounds = regions[reg_id][1]
-            if bounds[0] <= x <= bounds[2] and bounds[1] <= y <= bounds[3]:
-                possible_matches.append(reg_id)
-        for reg_id in possible_matches:
-            if regions[reg_id][0].contains(Point(x, y)):
-                results.append(reg_id)
-                success = True
-                break
-        if not success:
-            results.append(None)
-    return results
+        nearest = gpd.sjoin_nearest(
+            na_geolocations[["geometry"]],
+            regions,
+            how="left",
+            max_distance=max_distance,
+            distance_col="distance",
+        )
+        joined.update(nearest, overwrite=False)
+    joined["region_id"] = joined["region_id"].where(pd.notna(joined["region_id"]), None)
+    return joined["region_id"].tolist()
 
 
 def _fetch_from_ons_api(url, proxies=None, ssl_verify=True):

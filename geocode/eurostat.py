@@ -46,7 +46,7 @@ class Eurostat:
         Function to setup all lookup files.
         """
         for l in range(0, 4):
-            self._load_nuts_boundaries(l)
+            self.load_nuts_boundaries(l)
 
     def load_nuts_boundaries(
         self,
@@ -114,29 +114,12 @@ class Eurostat:
         )
         return nuts_regions
 
-    def _load_nuts_boundaries(self, level, year=2021):
-        """
-        For backwards compatibility pending https://github.com/SheffieldSolar/Geocode/issues/6
-
-        Load the NUTS boundaries, either from local cache if available, else fetch from Eurostat
-        API.
-        """
-        nuts_gdf = self.load_nuts_boundaries(level, year)
-        nuts_gdf["bounds"] = nuts_gdf.bounds.apply(tuple, axis=1)
-        nuts_dict = (
-            nuts_gdf[["NUTS_ID", "geometry", "bounds"]]
-            .set_index("NUTS_ID")
-            .to_dict("index")
-        )
-        for r in nuts_dict:
-            nuts_dict[r] = tuple(nuts_dict[r].values())
-        return nuts_dict
-
     def reverse_geocode_nuts(
         self,
         latlons: List[Tuple[float, float]],
         level: Literal[0, 1, 2, 3],
         year: Literal[2003, 2006, 2010, 2013, 2016, 2021] = 2021,
+        **kwargs,
     ) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to NUTS regions.
@@ -150,6 +133,8 @@ class Eurostat:
         `year` : int
             Specify the year of NUTS regulation, must be one of [2003,2006,2010,2013,2016,2021],
             defaults to 2021.
+        `**kwargs` : dict
+            Options to pass to the underlying utilities.reverse_geocode method.
 
         Returns
         -------
@@ -158,8 +143,12 @@ class Eurostat:
             do not fall inside a NUTS boundary will return None.
         """
         if self.nuts_regions[(level, year)] is None:
-            self.nuts_regions[(level, year)] = self._load_nuts_boundaries(
+            self.nuts_regions[(level, year)] = self.load_nuts_boundaries(
                 level=level, year=year
             )
-        results = utils.reverse_geocode(latlons, self.nuts_regions[(level, year)])
+        results = utils.reverse_geocode(
+            latlons,
+            self.nuts_regions[(level, year)].rename({"NUTS_ID": "region_id"}, axis=1),
+            **kwargs,
+        )
         return results
