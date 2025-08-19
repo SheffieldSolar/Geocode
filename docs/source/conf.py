@@ -12,6 +12,7 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath("../.."))
 
 
@@ -22,7 +23,7 @@ copyright = "2022, Jamie Taylor"
 author = "Jamie Taylor"
 
 # The full version, including alpha/beta/rc tags
-release = "1.1.5"
+release = "1.2"
 
 
 # -- General configuration ---------------------------------------------------
@@ -65,4 +66,4 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
 # -- Custom ------------------------------------------------------------------
-numpydoc_show_class_members = False 
+numpydoc_show_class_members = False

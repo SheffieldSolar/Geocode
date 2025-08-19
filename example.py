@@ -3,16 +3,26 @@ import logging
 
 from geocode import Geocoder
 
+
 def main():
     with Geocoder() as geocoder:
         # Geocode some postcodes / addresses...
         print("GEOCODE POSTCODES / ADDRESSES:")
         postcodes = ["S3 7RH", "S3 7", "S3", None, None, "S3 7RH"]
-        addresses = [None, None, None, "Hicks Building, Sheffield", "Hicks", "Hicks Building"]
+        addresses = [
+            None,
+            None,
+            None,
+            "Hicks Building, Sheffield",
+            "Hicks",
+            "Hicks Building",
+        ]
         results = geocoder.geocode(postcodes, "postcode", address=addresses)
         for postcode, address, (lat, lon, status) in zip(postcodes, addresses, results):
-            print(f"    Postcode + Address: `{postcode}` + `{address}`  ->  {lat:.3f}, {lon:.3f} "
-                  f"({geocoder.status_codes[status]})")
+            print(
+                f"    Postcode + Address: `{postcode}` + `{address}`  ->  {lat:.3f}, {lon:.3f} "
+                f"({geocoder.status_codes[status]})"
+            )
         # Geocode some LLSOAs...
         print("GEOCODE LLSOAs:")
         llsoas = ["E01033264", "E01033262"]
@@ -44,9 +54,12 @@ def main():
         for (lat, lon), nuts2 in zip(latlons, results):
             print(f"    LATLON: {lat:.3f}, {lon:.3f}  ->  {nuts2}")
 
+
 if __name__ == "__main__":
     log_fmt = "%(asctime)s [%(levelname)s] [%(filename)s:%(funcName)s] - %(message)s"
     fmt = os.environ.get("GEOCODE_LOGGING_FMT", log_fmt)
     datefmt = os.environ.get("GEOCODE_LOGGING_DATEFMT", "%Y-%m-%dT%H:%M:%SZ")
-    logging.basicConfig(format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "WARNING"))
+    logging.basicConfig(
+        format=fmt, datefmt=datefmt, level=os.environ.get("LOGLEVEL", "WARNING")
+    )
     main()

@@ -17,20 +17,27 @@ import numpy as np
 import pandas as pd
 import googlemaps
 
-from . utilities import GenericException
+from .utilities import GenericException
 
 SCRIPT_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
+
 class GMaps:
     """The Gmaps data manager for the Geocode class."""
-    def __init__(self, cache_manager, gmaps_key_file=None, proxies=None, ssl_verify=True):
+
+    def __init__(
+        self, cache_manager, gmaps_key_file=None, proxies=None, ssl_verify=True
+    ):
         """The Gmaps data manager for the Geocode class."""
         self.cache_manager = cache_manager
         self.gmaps_key = None
         self.gmaps_client = None
         self.cache_file = "gmaps_cache"
-        self.gmaps_key_file = gmaps_key_file if gmaps_key_file is not None \
-                                  else self.cache_manager.cache_dir.joinpath("key.txt")
+        self.gmaps_key_file = (
+            gmaps_key_file
+            if gmaps_key_file is not None
+            else self.cache_manager.cache_dir.joinpath("key.txt")
+        )
         self._load_cache()
         self.cache_modified = False
         self.proxies = proxies
@@ -50,9 +57,11 @@ class GMaps:
             with open(self.gmaps_key_file) as fid:
                 key = fid.read().strip()
         except FileNotFoundError:
-            logging.warning("Failed to load Google Maps API key from '%s' - you "
-                            "will not be able to make new queries to the Google Maps API!",
-                            self.gmaps_key_file)
+            logging.warning(
+                "Failed to load Google Maps API key from '%s' - you "
+                "will not be able to make new queries to the Google Maps API!",
+                self.gmaps_key_file,
+            )
             return None
         return key
 
@@ -61,8 +70,9 @@ class GMaps:
         if self.cache_modified:
             self.cache_manager.write(self.cache_file, self.cache)
 
-    def geocode_postcode(self, postcode: [str],
-                         address: Optional[str] = None) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
+    def geocode_postcode(
+        self, postcode: [str], address: Optional[str] = None
+    ) -> Union[Tuple[float, float], List[Tuple[float, float]]]:
         """
         Geocode several postcodes and/or addresses.
 
@@ -83,7 +93,9 @@ class GMaps:
             with the input iterable.
         """
         address = [None for a in address] if address is None else list(address)
-        logging.debug("Geocoding %s postcodes (%s addresses)", len(postcode), len(address))
+        logging.debug(
+            "Geocoding %s postcodes (%s addresses)", len(postcode), len(address)
+        )
         results = []
         for pc, addr in zip(postcode, address):
             results.append(self.geocode_one(postcode=pc, address=addr))
@@ -108,14 +120,14 @@ class GMaps:
             class attribute *self.status_codes* (a dict) to get a string representation.
         """
         if postcode is None and address is None:
-            raise utils.GenericException("You must pass either postcode or address, or both.")
+            raise utils.GenericException(
+                "You must pass either postcode or address, or both."
+            )
         if self.gmaps_key is None:
             self.gmaps_key = self._load_key()
             if self.gmaps_key is not None:
                 self.gmaps_client = googlemaps.Client(
-                    key=self.gmaps_key,
-                    proxies=self.proxies,
-                    ssl_verify=self.ssl_verify
+                    key=self.gmaps_key, proxies=self.proxies, ssl_verify=self.ssl_verify
                 )
         if self.cache is None:
             self._load_cache()
@@ -124,24 +136,35 @@ class GMaps:
         address = address if address is not None else ""
         search_term = f"{address}{sep}{postcode}"
         if search_term in self.cache:
-            logging.debug("Loading GMaps Geocoder API result from cache: '%s'", search_term)
+            logging.debug(
+                "Loading GMaps Geocoder API result from cache: '%s'", search_term
+            )
             geocode_result = self.cache[search_term]
         else:
             logging.debug("Querying Google Maps Geocoder API for '%s'", search_term)
             if self.gmaps_key is None:
-                return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+                return pd.Series(
+                    {"latitude": np.nan, "longitude": np.nan, "match_status": 0}
+                )
             geocode_result = self.gmaps_client.geocode(search_term, region="uk")
             self.cache[search_term] = geocode_result
             self.cache_modified = True
         if not geocode_result or len(geocode_result) > 1:
-            return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
+            return pd.Series(
+                {"latitude": np.nan, "longitude": np.nan, "match_status": 0}
+            )
         geometry = geocode_result[0]["geometry"]
         ok_loc_types = ["ROOFTOP", "GEOMETRIC_CENTER"]
-        if geometry["location_type"] in ok_loc_types or \
-            geocode_result[0]["types"] == ["postal_code"]:
-            return pd.Series({"latitude": geometry["location"]["lat"],
-                              "longitude": geometry["location"]["lng"],
-                              "match_status": 3})
+        if geometry["location_type"] in ok_loc_types or geocode_result[0]["types"] == [
+            "postal_code"
+        ]:
+            return pd.Series(
+                {
+                    "latitude": geometry["location"]["lat"],
+                    "longitude": geometry["location"]["lng"],
+                    "match_status": 3,
+                }
+            )
         return pd.Series({"latitude": np.nan, "longitude": np.nan, "match_status": 0})
 
     def _load_cache(self):
@@ -150,4 +173,3 @@ class GMaps:
         if self.cache is None:
             self.cache = {}
         return
-
