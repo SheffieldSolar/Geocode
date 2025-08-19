@@ -10,10 +10,10 @@ import sys
 import logging
 import requests
 import json
-import pandas as pd
-import geopandas as gpd
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
+import geopandas as gpd
+import pandas as pd
 import pyproj
 
 
