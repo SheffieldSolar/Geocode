@@ -278,6 +278,11 @@ def reverse_geocode(
         )
         joined.update(nearest, overwrite=False)
     joined["region_id"] = joined["region_id"].where(pd.notna(joined["region_id"]), None)
+    if "GSPGroup" in joined.columns:
+        joined["GSPGroup"] = joined["GSPGroup"].where(
+            pd.notna(joined["GSPGroup"]), None
+        )
+        return list(zip(joined["region_id"], joined["GSPGroup"]))
     return joined["region_id"].tolist()
 
 
