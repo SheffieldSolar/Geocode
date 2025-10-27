@@ -100,7 +100,7 @@ class geocodeTestCase(unittest.TestCase):
         """
         Test the `reverse_geocode_gsp` function with several test cases.
         """
-        gsp_regions = ["BRED_1", "DEWP"]
+        gsp_regions = [("BRED_1", "_G"), ("DEWP", "_N")]
         latlons = [(53.33985, -2.051880), (55.950095, -3.178485)]
         with Geocoder() as geo:
             assert_equal(
