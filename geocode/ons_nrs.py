@@ -44,13 +44,13 @@ class ONS_NRS:
         (NRS).
         """
         self.cache_manager = cache_manager
-        data_dir = SCRIPT_DIR.joinpath("ons")
-        self.nrs_zipfile = data_dir.joinpath("nrs.zip")
-        self.constituency_lookup_file = data_dir.joinpath(
+        self.data_dir = SCRIPT_DIR.joinpath("ons")
+        self.nrs_zipfile = self.data_dir.joinpath("nrs_2011.zip")
+        self.constituency_lookup_file = self.data_dir.joinpath(
             "constituency_centroids_Dec2020.psv"
         )
-        self.lad_lookup_file = data_dir.joinpath("lad_centroids_May2021.psv")
-        self.pc_llsoa_zipfile = data_dir.joinpath(
+        self.lad_lookup_file = self.data_dir.joinpath("lad_centroids_May2021.psv")
+        self.pc_llsoa_zipfile = self.data_dir.joinpath(
             "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip"
         )
         self.llsoa_lookup = None
@@ -133,7 +133,7 @@ class ONS_NRS:
         )
         return llsoa_lookup
 
-    def _load_llsoa_boundaries_engwales_regions(self):
+    def _load_llsoa_boundaries_engwales_regions(self, version: str):
         """
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
         """
@@ -141,14 +141,17 @@ class ONS_NRS:
             "Extracting the LLSOA boundary data from ONS (this only needs to be "
             "done once)"
         )
-        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
+        ons_url = {
+            "2011": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+            "2021": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_layer_Super_Output_Areas_December_2021_Boundaries_EW_BFC_V10/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+        }
         pages = utils._fetch_from_ons_api(
-            ons_url, proxies=self.proxies, ssl_verify=self.ssl_verify
+            ons_url[version], proxies=self.proxies, ssl_verify=self.ssl_verify
         )
         return gpd.GeoDataFrame(
             {
                 "llsoa11cd": [
-                    feature["properties"]["LSOA11CD"]
+                    feature["properties"][f"LSOA{version[-2:]}CD"]
                     for page in pages
                     for feature in page["features"]
                 ],
@@ -161,37 +164,52 @@ class ONS_NRS:
             crs="EPSG:4326",
         )
 
-    def _load_llsoa_boundaries_scots_regions(self):
+    def _load_llsoa_boundaries_scots_regions(self, version: str):
         """Load the LLSOA boundaries for Scotland from the NRS zipfile."""
-        nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
-        nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open(nrs_shp_file, "r") as shp:
-                with nrs_zip.open(nrs_dbf_file, "r") as dbf:
-                    sf = shapefile.Reader(shp=shp, dbf=dbf)
-                    return gpd.GeoDataFrame(
-                        {
-                            "llsoa11cd": [sr.record[1] for sr in sf.shapeRecords()],
-                            "geometry": [
-                                shape(sr.shape.__geo_interface__).buffer(0)
-                                for sr in sf.shapeRecords()
-                            ],
-                        },
-                        crs="EPSG:4326",
-                    )
+        with zipfile.ZipFile(
+            self.data_dir.joinpath(f"nrs_{version}.zip"), "r"
+        ) as nrs_zip:
+            if version == "2011":
+                nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
+                nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
+                with nrs_zip.open(nrs_shp_file, "r") as shp:
+                    with nrs_zip.open(nrs_dbf_file, "r") as dbf:
+                        sf = shapefile.Reader(shp=shp, dbf=dbf)
+                        return gpd.GeoDataFrame(
+                            {
+                                "llsoa11cd": [sr.record[1] for sr in sf.shapeRecords()],
+                                "geometry": [
+                                    shape(sr.shape.__geo_interface__).buffer(0)
+                                    for sr in sf.shapeRecords()
+                                ],
+                            },
+                            crs="EPSG:4326",
+                        )
+            if version == "2021":
+                nrs_shp_file = "OutputArea2022_EoR.shp"
+                gdf = gpd.read_file("OutputArea2022_EoR.shp")
+                gdf.set_crs("EPSG:27700", inplace=True)
+                gdf.to_crs("EPSG:4326", inplace=True)
+                return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
 
-    def _load_llsoa_boundaries(self):
+    def _load_llsoa_boundaries(self, version: str):
         """
-        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
-        (England and Wales) and packaged data (Scotland).
+        Load the LLSOA boundaries.
+
+        Parameters
+        ----------
+        `version` : str
+            The version of the LLSOA boundaries to load.
         """
-        cache_label = "llsoa_boundaries"
+        if version not in ["2011", "2021"]:
+            raise ValueError(f"LLSOA boundaries version {version} is not supported.")
+        cache_label = f"llsoa_boundaries_{version}"
         llsoa_boundaries_cache_contents = self.cache_manager.retrieve(cache_label)
         if llsoa_boundaries_cache_contents is not None:
             logging.debug("Loading LLSOA boundaries from cache ('%s')", cache_label)
             return llsoa_boundaries_cache_contents
-        llsoa_regions_engwales = self._load_llsoa_boundaries_engwales_regions()
-        llsoa_regions_scots = self._load_llsoa_boundaries_scots_regions()
+        llsoa_regions_engwales = self._load_llsoa_boundaries_engwales_regions(version)
+        llsoa_regions_scots = self._load_llsoa_boundaries_scots_regions(version)
         llsoa_regions = pd.concat(
             [llsoa_regions_engwales, llsoa_regions_scots]
         ).reset_index()
@@ -283,7 +301,11 @@ class ONS_NRS:
         return results
 
     def reverse_geocode_llsoa(
-        self, latlons: List[Tuple[float, float]], datazones: bool = False, **kwargs
+        self,
+        latlons: List[Tuple[float, float]],
+        version: str,
+        datazones: bool = False,
+        **kwargs,
     ) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to LLSOA.
@@ -303,11 +325,11 @@ class ONS_NRS:
             do not fall inside an LLSOA boundary will return None.
         """
         if self.llsoa_regions is None:
-            self.llsoa_regions = self._load_llsoa_boundaries()
+            self.llsoa_regions = self._load_llsoa_boundaries(version)
         results = utils.reverse_geocode(
             latlons,
             self.llsoa_regions.rename({"llsoa11cd": "region_id"}, axis=1),
-            **kwargs
+            **kwargs,
         )
         if datazones:
             if self.dz_lookup is None:
