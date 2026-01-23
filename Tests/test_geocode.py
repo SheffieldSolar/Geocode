@@ -37,7 +37,7 @@ class geocodeTestCase(unittest.TestCase):
             geo.force_setup()
         cache_dir = geo.cache_manager.cache_dir
         assert cache_dir.is_dir()
-        assert len([c for c in cache_dir.glob("*.p") if "gmaps" not in c.name]) == 15
+        assert len([c for c in cache_dir.glob("*.p") if "gmaps" not in c.name]) == 16
 
     def test_geocode_llsoa(self):
         """

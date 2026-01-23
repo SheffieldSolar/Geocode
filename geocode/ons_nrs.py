@@ -68,11 +68,12 @@ class ONS_NRS:
         Function to setup all lookup files.
         """
         self._load_llsoa_lookup()
-        self._load_llsoa_boundaries()
         self._load_datazone_lookup()
         self._load_constituency_lookup()
         self._load_lad_lookup()
         self._load_postcode_llsoa_lookup()
+        for version in ["2011", "2021"]:
+            self._load_llsoa_boundaries(version)
 
     def _load_llsoa_lookup(self):
         """Load the lookup of LLSOA -> Population Weighted Centroid."""
@@ -166,31 +167,15 @@ class ONS_NRS:
 
     def _load_llsoa_boundaries_scots_regions(self, version: str):
         """Load the LLSOA boundaries for Scotland from the NRS zipfile."""
-        with zipfile.ZipFile(
-            self.data_dir.joinpath(f"nrs_{version}.zip"), "r"
-        ) as nrs_zip:
-            if version == "2011":
-                nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
-                nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-                with nrs_zip.open(nrs_shp_file, "r") as shp:
-                    with nrs_zip.open(nrs_dbf_file, "r") as dbf:
-                        sf = shapefile.Reader(shp=shp, dbf=dbf)
-                        return gpd.GeoDataFrame(
-                            {
-                                "llsoa11cd": [sr.record[1] for sr in sf.shapeRecords()],
-                                "geometry": [
-                                    shape(sr.shape.__geo_interface__).buffer(0)
-                                    for sr in sf.shapeRecords()
-                                ],
-                            },
-                            crs="EPSG:4326",
-                        )
-            if version == "2021":
-                nrs_shp_file = "OutputArea2022_EoR.shp"
-                gdf = gpd.read_file("OutputArea2022_EoR.shp")
-                gdf.set_crs("EPSG:27700", inplace=True)
-                gdf.to_crs("EPSG:4326", inplace=True)
-                return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        if version == "2011":
+            gdf = gpd.read_file(f"zip://{zip_path}!OutputArea2011_EoR_WGS84.shp")
+            gdf.set_crs("EPSG:4326", inplace=True)
+        if version == "2021":
+            gdf = gpd.read_file(f"zip://{zip_path}!OutputArea2022_EoR.shp")
+            gdf.set_crs("EPSG:27700", inplace=True)
+            gdf.to_crs("EPSG:4326", inplace=True)
+        return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
 
     def _load_llsoa_boundaries(self, version: str):
         """
