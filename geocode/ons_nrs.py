@@ -136,7 +136,12 @@ class ONS_NRS:
 
     def _load_llsoa_boundaries_engwales_regions(self, version: str):
         """
-        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
+        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API.
+
+        Parameters
+        ----------
+        `version` : str
+            The version of the LLSOA boundaries to load.
         """
         logging.info(
             "Extracting the LLSOA boundary data from ONS (this only needs to be "
@@ -166,7 +171,14 @@ class ONS_NRS:
         )
 
     def _load_llsoa_boundaries_scots_regions(self, version: str):
-        """Load the LLSOA boundaries for Scotland from the NRS zipfile."""
+        """
+        Load the LLSOA boundaries for Scotland from the NRS zipfile.
+
+        Parameters
+        ----------
+        `version` : str
+            The version of the LLSOA boundaries to load.
+        """
         zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
         if version == "2011":
             gdf = gpd.read_file(f"zip://{zip_path}!OutputArea2011_EoR_WGS84.shp")
