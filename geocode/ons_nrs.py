@@ -185,9 +185,10 @@ class ONS_NRS:
             "2021": "OutputArea2022_EoR.shp",
         }
         gdf = gpd.read_file(f"zip://{zip_path}!{llsoa_filename[version]}")
-        gdf.set_crs("EPSG:4326", inplace=True)
         if version == "2021":
+            gdf.set_crs("EPSG:27700", inplace=True)
             gdf.to_crs("EPSG:4326", inplace=True)
+        gdf.set_crs("EPSG:4326", inplace=True)
         return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
 
     def _load_llsoa_boundaries(self, version: str):
