@@ -180,12 +180,13 @@ class ONS_NRS:
             The version of the LLSOA boundaries to load.
         """
         zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
-        if version == "2011":
-            gdf = gpd.read_file(f"zip://{zip_path}!OutputArea2011_EoR_WGS84.shp")
-            gdf.set_crs("EPSG:4326", inplace=True)
+        llsoa_filename = {
+            "2011": "OutputArea2011_EoR_WGS84.shp",
+            "2021": "OutputArea2022_EoR.shp",
+        }
+        gdf = gpd.read_file(f"zip://{zip_path}!{llsoa_filename[version]}")
+        gdf.set_crs("EPSG:4326", inplace=True)
         if version == "2021":
-            gdf = gpd.read_file(f"zip://{zip_path}!OutputArea2022_EoR.shp")
-            gdf.set_crs("EPSG:27700", inplace=True)
             gdf.to_crs("EPSG:4326", inplace=True)
         return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
 
