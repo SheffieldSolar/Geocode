@@ -68,12 +68,12 @@ class ONS_NRS:
         Function to setup all lookup files.
         """
         self._load_llsoa_lookup()
-        self._load_datazone_lookup()
         self._load_constituency_lookup()
         self._load_lad_lookup()
         self._load_postcode_llsoa_lookup()
         for version in ["2011", "2021"]:
             self._load_llsoa_boundaries(version)
+            self._load_datazone_lookup(version)
 
     def _load_llsoa_lookup(self):
         """Load the lookup of LLSOA -> Population Weighted Centroid."""
@@ -219,21 +219,31 @@ class ONS_NRS:
         )
         return llsoa_regions
 
-    def _load_datazone_lookup(self):
+    def _load_datazone_lookup(self, version: str):
         """Load a lookup of Scottish LLSOA <-> Datazone."""
-        datazone_lookup_cache_contents = self.cache_manager.retrieve("datazone_lookup")
+        if version not in ["2011", "2021"]:
+            raise ValueError(f"LLSOA boundaries version {version} is not supported.")
+        cache_label = f"datazone_lookup_{version}"
+        datazone_lookup_cache_contents = self.cache_manager.retrieve(cache_label)
         if datazone_lookup_cache_contents is not None:
             logging.debug(
-                "Loading LLSOA<->Datazone lookup from cache ('%s')", "datazone_lookup"
+                f"Loading {version} LLSOA<->Datazone lookup from cache {cache_label}"
             )
             return datazone_lookup_cache_contents
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open("OA_DZ_IZ_2011.csv", "r") as fid:
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
+        with zipfile.ZipFile(zip_path, "r") as nrs_zip:
+            with nrs_zip.open(dz_lookup_filename[version], "r") as fid:
                 dz_lookup = pd.read_csv(fid)
-        dz_lookup.set_index("OutputArea2011Code", inplace=True)
-        dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
-        dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
-        self.cache_manager.write("datazone_lookup", dz_lookup)
+        if version == "2011":
+            dz_lookup.set_index("OutputArea2011Code", inplace=True)
+            dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
+            dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
+        elif version == "2021":
+            dz_lookup.set_index("OA22", inplace=True)
+            dz_lookup.drop(columns=["IZ22"], inplace=True)
+            dz_lookup = dz_lookup.to_dict()["DZ22"]
+        self.cache_manager.write(f"datazone_lookup_{version}", dz_lookup)
         return dz_lookup
 
     def _load_constituency_lookup(self):
@@ -332,7 +342,7 @@ class ONS_NRS:
         )
         if datazones:
             if self.dz_lookup is None:
-                self.dz_lookup = self._load_datazone_lookup()
+                self.dz_lookup = self._load_datazone_lookup(version)
             results = [
                 llsoacd if llsoacd not in self.dz_lookup else self.dz_lookup[llsoacd]
                 for llsoacd in results
