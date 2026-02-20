@@ -86,15 +86,35 @@ class ONS_NRS:
             "Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
             "once)"
         )
-        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
+        ons_url = {
+            "2011": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+            "2021": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_PopCentroids_EW_2021_V4/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+        }
         pages = utils._fetch_from_ons_api(
-            ons_url, proxies=self.proxies, ssl_verify=self.ssl_verify
+            ons_url["2011"], proxies=self.proxies, ssl_verify=self.ssl_verify
         )
-        engwales_lookup = {
+        engwales_lookup_2011 = {
             f["properties"]["lsoa11cd"]: tuple(f["geometry"]["coordinates"][::-1])
             for page in pages
             for f in page["features"]
         }
+        engwales_lookup_2011 = pd.DataFrame(engwales_lookup_2011).transpose()
+        engwales_lookup_2011.columns = ["latitude", "longitude"]
+        pages = utils._fetch_from_ons_api(
+            ons_url["2021"], proxies=self.proxies, ssl_verify=self.ssl_verify
+        )
+        engwales_lookup_2021 = {
+            f["properties"]["LSOA21CD"]: tuple(f["geometry"]["coordinates"][::-1])
+            for page in pages
+            for f in page["features"]
+        }
+        engwales_lookup_2021 = pd.DataFrame(engwales_lookup_2021).transpose()
+        engwales_lookup_2021.columns = ["latitude", "longitude"]
+        engwales_lookup = pd.concat([engwales_lookup_2011, engwales_lookup_2021])
+        # keep latest version of LLSOA where duplicates exist
+        engwales_lookup = engwales_lookup[
+            ~engwales_lookup.index.duplicated(keep="last")
+        ]
         codes, eastings, northings = [], [], []
         datazones, dzeastings, dznorthings = [], [], []
         with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
