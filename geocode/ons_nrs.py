@@ -115,39 +115,51 @@ class ONS_NRS:
         engwales_lookup = engwales_lookup[
             ~engwales_lookup.index.duplicated(keep="last")
         ]
-        codes, eastings, northings = [], [], []
-        datazones, dzeastings, dznorthings = [], [], []
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open("OutputArea2011_PWC_WGS84.csv", "r") as fid:
-                next(fid)
-                for line in fid:
-                    _, _, code, _, easting, northing = (
-                        line.decode("UTF-8").strip().split(",")
-                    )
-                    codes.append(code)
-                    eastings.append(float(easting))
-                    northings.append(float(northing))
-            with nrs_zip.open("SG_DataZone_Cent_2011.csv") as fid:
-                next(fid)
-                contents = [l.decode("UTF-8") for l in fid.readlines()]
-                for line in csv.reader(
-                    contents,
-                    quotechar='"',
-                    delimiter=",",
-                    quoting=csv.QUOTE_ALL,
-                    skipinitialspace=True,
-                ):
-                    datazone, _, _, _, _, dzeast, dznorth = line
-                    datazones.append(datazone)
-                    dzeastings.append(float(dzeast.strip('"')))
-                    dznorthings.append(float(dznorth.strip('"')))
-        lons, lats = utils.bng2latlon(eastings, northings)
-        dzlons, dzlats = utils.bng2latlon(dzeastings, dznorthings)
-        scots_lookup = {code: (lat, lon) for code, lon, lat in zip(codes, lons, lats)}
-        scots_dz_lookup = {
-            dz: (lat, lon) for dz, lon, lat in zip(datazones, dzlons, dzlats)
-        }
-        llsoa_lookup = {**engwales_lookup, **scots_lookup, **scots_dz_lookup}
+        engwales_lookup.reset_index(names="code", inplace=True)
+
+        zip_path_2011 = self.data_dir.joinpath("nrs_2011.zip")
+        zip_path_2021 = self.data_dir.joinpath("nrs_2021.zip")
+
+        OA_2011_centroids = gpd.read_file(
+            f"zip://{zip_path_2011}!OutputArea2011_PWC_WGS84.csv",
+            columns=["code", "easting", "northing"],
+        )
+        OA_2011_centroids = utils.add_latlon(OA_2011_centroids, "easting", "northing")
+        scots_lookup_2011 = OA_2011_centroids[["code", "latitude", "longitude"]]
+        OA_2021_centroids = gpd.read_file(
+            f"zip://{zip_path_2021}!OutputArea2022_PWC_WGS84.csv",
+            columns=["code", "easting", "northing"],
+        )
+        OA_2021_centroids = utils.add_latlon(OA_2021_centroids, "easting", "northing")
+        scots_lookup_2021 = OA_2021_centroids[["code", "latitude", "longitude"]]
+        scots_lookup = pd.concat([scots_lookup_2011, scots_lookup_2021]).reset_index(
+            drop=True
+        )
+
+        DZ_2011_centroids = gpd.read_file(
+            f"zip://{zip_path_2011}!SG_DataZone_Cent_2011.csv",
+            columns=["DataZone", "Easting", "Northing"],
+        )
+        DZ_2011_centroids = utils.add_latlon(DZ_2011_centroids, "Easting", "Northing")
+        scots_dz_lookup_2011 = DZ_2011_centroids[
+            ["DataZone", "latitude", "longitude"]
+        ].rename(columns={"DataZone": "code"})
+        DZ_2021_centroids = gpd.read_file(
+            f"zip://{zip_path_2021}!SG_DataZone_Cent_2022.csv",
+            columns=["DataZone", "Easting", "Northing"],
+        )
+        DZ_2021_centroids = utils.add_latlon(DZ_2021_centroids, "Easting", "Northing")
+        scots_dz_lookup_2021 = DZ_2021_centroids[
+            ["DataZone", "latitude", "longitude"]
+        ].rename(columns={"DataZone": "code"})
+        scots_dz_lookup = pd.concat(
+            [scots_dz_lookup_2011, scots_dz_lookup_2021]
+        ).reset_index(drop=True)
+
+        llsoa_lookup = pd.concat(
+            [engwales_lookup, scots_lookup, scots_dz_lookup]
+        ).reset_index(drop=True)
+        llsoa_lookup.set_index("code", inplace=True)
         self.cache_manager.write(cache_label, llsoa_lookup)
         logging.info(
             "LLSOA centroids extracted and pickled to file ('%s')", cache_label
@@ -527,6 +539,9 @@ class ONS_NRS:
     def _llsoa_centroid(self, llsoa):
         """Lookup the PWC for a given LLSOA code."""
         try:
-            return self.llsoa_lookup[llsoa]
+            return (
+                self.llsoa_lookup.loc[llsoa]["latitude"],
+                self.llsoa_lookup.loc[llsoa]["longitude"],
+            )
         except KeyError:
             return None, None
