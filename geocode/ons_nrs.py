@@ -13,7 +13,7 @@ import json
 import csv
 import logging
 from pathlib import Path
-from typing import Optional, Iterable, Tuple, Union, List, Dict
+from typing import Literal, Optional, Iterable, Tuple, Union, List, Dict
 
 import pandas as pd
 import geopandas as gpd
@@ -166,13 +166,13 @@ class ONS_NRS:
         )
         return llsoa_lookup
 
-    def _load_llsoa_boundaries_engwales_regions(self, version: str):
+    def _load_llsoa_boundaries_engwales_regions(self, version: Literal["2011", "2021"]):
         """
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API.
 
         Parameters
         ----------
-        `version` : str
+        `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
         logging.info(
@@ -202,13 +202,13 @@ class ONS_NRS:
             crs="EPSG:4326",
         )
 
-    def _load_llsoa_boundaries_scots_regions(self, version: str):
+    def _load_llsoa_boundaries_scots_regions(self, version: Literal["2011", "2021"]):
         """
         Load the LLSOA boundaries for Scotland from the NRS zipfile.
 
         Parameters
         ----------
-        `version` : str
+        `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
         zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
@@ -223,17 +223,19 @@ class ONS_NRS:
         gdf.set_crs("EPSG:4326", inplace=True)
         return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
 
-    def _load_llsoa_boundaries(self, version: str):
+    def _load_llsoa_boundaries(self, version: Literal["2011", "2021"]):
         """
         Load the LLSOA boundaries.
 
         Parameters
         ----------
-        `version` : str
+        `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
         if version not in ["2011", "2021"]:
-            raise ValueError(f"LLSOA boundaries version {version} is not supported.")
+            raise ValueError(
+                f"LLSOA boundaries version {version} is not supported. Supported versions are '2011' and '2021'."
+            )
         cache_label = f"llsoa_boundaries_{version}"
         llsoa_boundaries_cache_contents = self.cache_manager.retrieve(cache_label)
         if llsoa_boundaries_cache_contents is not None:
@@ -251,10 +253,19 @@ class ONS_NRS:
         )
         return llsoa_regions
 
-    def _load_datazone_lookup(self, version: str):
-        """Load a lookup of Scottish LLSOA <-> Datazone."""
+    def _load_datazone_lookup(self, version: Literal["2011", "2021"]):
+        """
+        Load a lookup of Scottish LLSOA <-> Datazone.
+
+        Parameters
+        ----------
+        `version` : Literal["2011", "2021"]
+            The version of the LLSOA boundaries to load.
+        """
         if version not in ["2011", "2021"]:
-            raise ValueError(f"LLSOA boundaries version {version} is not supported.")
+            raise ValueError(
+                f"LLSOA boundaries version {version} is not supported. Supported versions are '2011' and '2021'."
+            )
         cache_label = f"datazone_lookup_{version}"
         datazone_lookup_cache_contents = self.cache_manager.retrieve(cache_label)
         if datazone_lookup_cache_contents is not None:
