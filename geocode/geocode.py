@@ -298,7 +298,7 @@ class Geocoder:
             return self.neso.reverse_geocode_gsp(latlons, version, **kwargs)
         elif entity == "llsoa":
             version = kwargs.pop("version", "2011")
-            return self.ons_nrs.reverse_geocode_llsoa(latlons, version, **kwargs)
+            return self.ons_nrs.reverse_geocode_llsoa(latlons, version=version, **kwargs)
         elif entity == "nuts":
             return self.eurostat.reverse_geocode_nuts(latlons=latlons, **kwargs)
         else:
