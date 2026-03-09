@@ -31,6 +31,7 @@ class geocodeTestCase(unittest.TestCase):
         assert cache_dir.is_dir()
         assert len([c for c in cache_dir.glob("*.p") if "gmaps" not in c.name]) == 0
 
+    @unittest.skip("Skipped to avoid external API calls")
     def test_force_setup(self):
         """Test the `force_setup()` method."""
         with Geocoder() as geo:
