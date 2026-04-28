@@ -384,3 +384,42 @@ def bng2latlon(
     proj = pyproj.Transformer.from_crs(27700, 4326, always_xy=True)
     lons, lats = proj.transform(eastings, northings)
     return lons, lats
+
+
+def add_latlon(
+    df: pd.DataFrame,
+    eastings_col: str,
+    northings_col: str,
+    lat_col: str = "latitude",
+    lon_col: str = "longitude",
+) -> pd.DataFrame:
+    """
+    Add latitude and longitude columns to a DataFrame containing Eastings and Northings.
+
+    Parameters
+    ----------
+    `df` : pd.DataFrame
+        A DataFrame containing columns of Eastings and Northings.
+    `eastings_col` : str
+        The name of the column in `df` containing Eastings.
+    `northings_col` : str
+        The name of the column in `df` containing Northings.
+    `lat_col` : str, optional
+        The name of the latitude column to add to `df`. Default is "latitude".
+    `lon_col` : str, optional
+        The name of the longitude column to add to `df`. Default is "longitude".
+
+    Returns
+    -------
+    pd.DataFrame
+        The input DataFrame with added latitude and longitude columns.
+    """
+    df = gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df[eastings_col], df[northings_col]),
+        crs="EPSG:27700",
+    )
+    df.to_crs("EPSG:4326", inplace=True)
+    df[lat_col] = df.geometry.y
+    df[lon_col] = df.geometry.x
+    return df

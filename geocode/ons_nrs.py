@@ -13,7 +13,7 @@ import json
 import csv
 import logging
 from pathlib import Path
-from typing import Optional, Iterable, Tuple, Union, List, Dict
+from typing import Literal, Optional, Iterable, Tuple, Union, List, Dict
 
 import pandas as pd
 import geopandas as gpd
@@ -44,13 +44,13 @@ class ONS_NRS:
         (NRS).
         """
         self.cache_manager = cache_manager
-        data_dir = SCRIPT_DIR.joinpath("ons")
-        self.nrs_zipfile = data_dir.joinpath("nrs.zip")
-        self.constituency_lookup_file = data_dir.joinpath(
+        self.data_dir = SCRIPT_DIR.joinpath("ons")
+        self.nrs_zipfile = self.data_dir.joinpath("nrs_2011.zip")
+        self.constituency_lookup_file = self.data_dir.joinpath(
             "constituency_centroids_Dec2020.psv"
         )
-        self.lad_lookup_file = data_dir.joinpath("lad_centroids_May2021.psv")
-        self.pc_llsoa_zipfile = data_dir.joinpath(
+        self.lad_lookup_file = self.data_dir.joinpath("lad_centroids_May2021.psv")
+        self.pc_llsoa_zipfile = self.data_dir.joinpath(
             "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip"
         )
         self.llsoa_lookup = None
@@ -68,11 +68,12 @@ class ONS_NRS:
         Function to setup all lookup files.
         """
         self._load_llsoa_lookup()
-        self._load_llsoa_boundaries()
-        self._load_datazone_lookup()
         self._load_constituency_lookup()
         self._load_lad_lookup()
         self._load_postcode_llsoa_lookup()
+        for version in ["2011", "2021"]:
+            self._load_llsoa_boundaries(version)
+            self._load_datazone_lookup(version)
 
     def _load_llsoa_lookup(self):
         """Load the lookup of LLSOA -> Population Weighted Centroid."""
@@ -85,70 +86,110 @@ class ONS_NRS:
             "Extracting the ONS and NRS LLSOA centroids data (this only needs to be done "
             "once)"
         )
-        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
+        ons_url = {
+            "2011": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_Dec_2011_PWC_in_England_and_Wales_2022/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+            "2021": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/LSOA_PopCentroids_EW_2021_V4/FeatureServer/0/query?where=1%3D1&outFields=*&outSR=4326&f=geojson",
+        }
         pages = utils._fetch_from_ons_api(
-            ons_url, proxies=self.proxies, ssl_verify=self.ssl_verify
+            ons_url["2011"], proxies=self.proxies, ssl_verify=self.ssl_verify
         )
-        engwales_lookup = {
+        engwales_lookup_2011 = {
             f["properties"]["lsoa11cd"]: tuple(f["geometry"]["coordinates"][::-1])
             for page in pages
             for f in page["features"]
         }
-        codes, eastings, northings = [], [], []
-        datazones, dzeastings, dznorthings = [], [], []
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open("OutputArea2011_PWC_WGS84.csv", "r") as fid:
-                next(fid)
-                for line in fid:
-                    _, _, code, _, easting, northing = (
-                        line.decode("UTF-8").strip().split(",")
-                    )
-                    codes.append(code)
-                    eastings.append(float(easting))
-                    northings.append(float(northing))
-            with nrs_zip.open("SG_DataZone_Cent_2011.csv") as fid:
-                next(fid)
-                contents = [l.decode("UTF-8") for l in fid.readlines()]
-                for line in csv.reader(
-                    contents,
-                    quotechar='"',
-                    delimiter=",",
-                    quoting=csv.QUOTE_ALL,
-                    skipinitialspace=True,
-                ):
-                    datazone, _, _, _, _, dzeast, dznorth = line
-                    datazones.append(datazone)
-                    dzeastings.append(float(dzeast.strip('"')))
-                    dznorthings.append(float(dznorth.strip('"')))
-        lons, lats = utils.bng2latlon(eastings, northings)
-        dzlons, dzlats = utils.bng2latlon(dzeastings, dznorthings)
-        scots_lookup = {code: (lat, lon) for code, lon, lat in zip(codes, lons, lats)}
-        scots_dz_lookup = {
-            dz: (lat, lon) for dz, lon, lat in zip(datazones, dzlons, dzlats)
+        engwales_lookup_2011 = pd.DataFrame(engwales_lookup_2011).transpose()
+        engwales_lookup_2011.columns = ["latitude", "longitude"]
+        pages = utils._fetch_from_ons_api(
+            ons_url["2021"], proxies=self.proxies, ssl_verify=self.ssl_verify
+        )
+        engwales_lookup_2021 = {
+            f["properties"]["LSOA21CD"]: tuple(f["geometry"]["coordinates"][::-1])
+            for page in pages
+            for f in page["features"]
         }
-        llsoa_lookup = {**engwales_lookup, **scots_lookup, **scots_dz_lookup}
+        engwales_lookup_2021 = pd.DataFrame(engwales_lookup_2021).transpose()
+        engwales_lookup_2021.columns = ["latitude", "longitude"]
+        engwales_lookup = pd.concat([engwales_lookup_2011, engwales_lookup_2021])
+        # keep latest version of LLSOA where duplicates exist
+        engwales_lookup = engwales_lookup[
+            ~engwales_lookup.index.duplicated(keep="last")
+        ]
+        engwales_lookup.reset_index(names="code", inplace=True)
+
+        zip_path_2011 = self.data_dir.joinpath("nrs_2011.zip")
+        zip_path_2021 = self.data_dir.joinpath("nrs_2021.zip")
+
+        OA_2011_centroids = gpd.read_file(
+            f"zip://{zip_path_2011}!OutputArea2011_PWC_WGS84.csv",
+            columns=["code", "easting", "northing"],
+        )
+        OA_2011_centroids = utils.add_latlon(OA_2011_centroids, "easting", "northing")
+        scots_lookup_2011 = OA_2011_centroids[["code", "latitude", "longitude"]]
+        OA_2021_centroids = gpd.read_file(
+            f"zip://{zip_path_2021}!OutputArea2022_PWC_WGS84.csv",
+            columns=["code", "easting", "northing"],
+        )
+        OA_2021_centroids = utils.add_latlon(OA_2021_centroids, "easting", "northing")
+        scots_lookup_2021 = OA_2021_centroids[["code", "latitude", "longitude"]]
+        scots_lookup = pd.concat([scots_lookup_2011, scots_lookup_2021]).reset_index(
+            drop=True
+        )
+
+        DZ_2011_centroids = gpd.read_file(
+            f"zip://{zip_path_2011}!SG_DataZone_Cent_2011.csv",
+            columns=["DataZone", "Easting", "Northing"],
+        )
+        DZ_2011_centroids = utils.add_latlon(DZ_2011_centroids, "Easting", "Northing")
+        scots_dz_lookup_2011 = DZ_2011_centroids[
+            ["DataZone", "latitude", "longitude"]
+        ].rename(columns={"DataZone": "code"})
+        DZ_2021_centroids = gpd.read_file(
+            f"zip://{zip_path_2021}!SG_DataZone_Cent_2022.csv",
+            columns=["DataZone", "Easting", "Northing"],
+        )
+        DZ_2021_centroids = utils.add_latlon(DZ_2021_centroids, "Easting", "Northing")
+        scots_dz_lookup_2021 = DZ_2021_centroids[
+            ["DataZone", "latitude", "longitude"]
+        ].rename(columns={"DataZone": "code"})
+        scots_dz_lookup = pd.concat(
+            [scots_dz_lookup_2011, scots_dz_lookup_2021]
+        ).reset_index(drop=True)
+
+        llsoa_lookup = pd.concat(
+            [engwales_lookup, scots_lookup, scots_dz_lookup]
+        ).reset_index(drop=True)
+        llsoa_lookup.set_index("code", inplace=True)
         self.cache_manager.write(cache_label, llsoa_lookup)
         logging.info(
             "LLSOA centroids extracted and pickled to file ('%s')", cache_label
         )
         return llsoa_lookup
 
-    def _load_llsoa_boundaries_engwales_regions(self):
+    def _load_llsoa_boundaries_engwales_regions(self, version: Literal["2011", "2021"]):
         """
-        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
+        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API.
+
+        Parameters
+        ----------
+        `version` : Literal["2011", "2021"]
+            The version of the LLSOA boundaries to load.
         """
         logging.info(
             "Extracting the LLSOA boundary data from ONS (this only needs to be "
             "done once)"
         )
-        ons_url = "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
+        ons_url = {
+            "2011": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_Layer_Super_Output_Areas_Dec_2011_Boundaries_Full_Extent_BFE_EW_V3_2022/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+            "2021": "https://services1.arcgis.com/ESMARspQHYMw9BZ9/arcgis/rest/services/Lower_layer_Super_Output_Areas_December_2021_Boundaries_EW_BFC_V10/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson",
+        }
         pages = utils._fetch_from_ons_api(
-            ons_url, proxies=self.proxies, ssl_verify=self.ssl_verify
+            ons_url[version], proxies=self.proxies, ssl_verify=self.ssl_verify
         )
         return gpd.GeoDataFrame(
             {
                 "llsoa11cd": [
-                    feature["properties"]["LSOA11CD"]
+                    feature["properties"][f"LSOA{version[-2:]}CD"]
                     for page in pages
                     for feature in page["features"]
                 ],
@@ -161,37 +202,47 @@ class ONS_NRS:
             crs="EPSG:4326",
         )
 
-    def _load_llsoa_boundaries_scots_regions(self):
-        """Load the LLSOA boundaries for Scotland from the NRS zipfile."""
-        nrs_shp_file = "OutputArea2011_EoR_WGS84.shp"
-        nrs_dbf_file = "OutputArea2011_EoR_WGS84.dbf"
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open(nrs_shp_file, "r") as shp:
-                with nrs_zip.open(nrs_dbf_file, "r") as dbf:
-                    sf = shapefile.Reader(shp=shp, dbf=dbf)
-                    return gpd.GeoDataFrame(
-                        {
-                            "llsoa11cd": [sr.record[1] for sr in sf.shapeRecords()],
-                            "geometry": [
-                                shape(sr.shape.__geo_interface__).buffer(0)
-                                for sr in sf.shapeRecords()
-                            ],
-                        },
-                        crs="EPSG:4326",
-                    )
+    def _load_llsoa_boundaries_scots_regions(self, version: Literal["2011", "2021"]):
+        """
+        Load the LLSOA boundaries for Scotland from the NRS zipfile.
 
-    def _load_llsoa_boundaries(self):
+        Parameters
+        ----------
+        `version` : Literal["2011", "2021"]
+            The version of the LLSOA boundaries to load.
         """
-        Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
-        (England and Wales) and packaged data (Scotland).
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        llsoa_filename = {
+            "2011": "OutputArea2011_EoR_WGS84.shp",
+            "2021": "OutputArea2022_EoR.shp",
+        }
+        gdf = gpd.read_file(f"zip://{zip_path}!{llsoa_filename[version]}")
+        if version == "2021":
+            gdf.set_crs("EPSG:27700", inplace=True)
+            gdf.to_crs("EPSG:4326", inplace=True)
+        gdf.set_crs("EPSG:4326", inplace=True)
+        return gdf[["code", "geometry"]].rename(columns={"code": "llsoa11cd"})
+
+    def _load_llsoa_boundaries(self, version: Literal["2011", "2021"]):
         """
-        cache_label = "llsoa_boundaries"
+        Load the LLSOA boundaries.
+
+        Parameters
+        ----------
+        `version` : Literal["2011", "2021"]
+            The version of the LLSOA boundaries to load.
+        """
+        if version not in ["2011", "2021"]:
+            raise ValueError(
+                f"LLSOA boundaries version {version} is not supported. Supported versions are '2011' and '2021'."
+            )
+        cache_label = f"llsoa_boundaries_{version}"
         llsoa_boundaries_cache_contents = self.cache_manager.retrieve(cache_label)
         if llsoa_boundaries_cache_contents is not None:
             logging.debug("Loading LLSOA boundaries from cache ('%s')", cache_label)
             return llsoa_boundaries_cache_contents
-        llsoa_regions_engwales = self._load_llsoa_boundaries_engwales_regions()
-        llsoa_regions_scots = self._load_llsoa_boundaries_scots_regions()
+        llsoa_regions_engwales = self._load_llsoa_boundaries_engwales_regions(version)
+        llsoa_regions_scots = self._load_llsoa_boundaries_scots_regions(version)
         llsoa_regions = pd.concat(
             [llsoa_regions_engwales, llsoa_regions_scots]
         ).reset_index()
@@ -202,21 +253,40 @@ class ONS_NRS:
         )
         return llsoa_regions
 
-    def _load_datazone_lookup(self):
-        """Load a lookup of Scottish LLSOA <-> Datazone."""
-        datazone_lookup_cache_contents = self.cache_manager.retrieve("datazone_lookup")
+    def _load_datazone_lookup(self, version: Literal["2011", "2021"]):
+        """
+        Load a lookup of Scottish LLSOA <-> Datazone.
+
+        Parameters
+        ----------
+        `version` : Literal["2011", "2021"]
+            The version of the LLSOA boundaries to load.
+        """
+        if version not in ["2011", "2021"]:
+            raise ValueError(
+                f"LLSOA boundaries version {version} is not supported. Supported versions are '2011' and '2021'."
+            )
+        cache_label = f"datazone_lookup_{version}"
+        datazone_lookup_cache_contents = self.cache_manager.retrieve(cache_label)
         if datazone_lookup_cache_contents is not None:
             logging.debug(
-                "Loading LLSOA<->Datazone lookup from cache ('%s')", "datazone_lookup"
+                f"Loading {version} LLSOA<->Datazone lookup from cache {cache_label}"
             )
             return datazone_lookup_cache_contents
-        with zipfile.ZipFile(self.nrs_zipfile, "r") as nrs_zip:
-            with nrs_zip.open("OA_DZ_IZ_2011.csv", "r") as fid:
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
+        with zipfile.ZipFile(zip_path, "r") as nrs_zip:
+            with nrs_zip.open(dz_lookup_filename[version], "r") as fid:
                 dz_lookup = pd.read_csv(fid)
-        dz_lookup.set_index("OutputArea2011Code", inplace=True)
-        dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
-        dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
-        self.cache_manager.write("datazone_lookup", dz_lookup)
+        if version == "2011":
+            dz_lookup.set_index("OutputArea2011Code", inplace=True)
+            dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
+            dz_lookup = dz_lookup.to_dict()["DataZone2011Code"]
+        elif version == "2021":
+            dz_lookup.set_index("OA22", inplace=True)
+            dz_lookup.drop(columns=["IZ22"], inplace=True)
+            dz_lookup = dz_lookup.to_dict()["DZ22"]
+        self.cache_manager.write(f"datazone_lookup_{version}", dz_lookup)
         return dz_lookup
 
     def _load_constituency_lookup(self):
@@ -283,7 +353,11 @@ class ONS_NRS:
         return results
 
     def reverse_geocode_llsoa(
-        self, latlons: List[Tuple[float, float]], datazones: bool = False, **kwargs
+        self,
+        latlons: List[Tuple[float, float]],
+        version: str,
+        datazones: bool = False,
+        **kwargs,
     ) -> List[str]:
         """
         Reverse-geocode latitudes and longitudes to LLSOA.
@@ -303,15 +377,15 @@ class ONS_NRS:
             do not fall inside an LLSOA boundary will return None.
         """
         if self.llsoa_regions is None:
-            self.llsoa_regions = self._load_llsoa_boundaries()
+            self.llsoa_regions = self._load_llsoa_boundaries(version)
         results = utils.reverse_geocode(
             latlons,
             self.llsoa_regions.rename({"llsoa11cd": "region_id"}, axis=1),
-            **kwargs
+            **kwargs,
         )
         if datazones:
             if self.dz_lookup is None:
-                self.dz_lookup = self._load_datazone_lookup()
+                self.dz_lookup = self._load_datazone_lookup(version)
             results = [
                 llsoacd if llsoacd not in self.dz_lookup else self.dz_lookup[llsoacd]
                 for llsoacd in results
@@ -476,6 +550,9 @@ class ONS_NRS:
     def _llsoa_centroid(self, llsoa):
         """Lookup the PWC for a given LLSOA code."""
         try:
-            return self.llsoa_lookup[llsoa]
+            return (
+                self.llsoa_lookup.loc[llsoa]["latitude"],
+                self.llsoa_lookup.loc[llsoa]["longitude"],
+            )
         except KeyError:
             return None, None
