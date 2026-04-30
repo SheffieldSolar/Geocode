@@ -76,7 +76,7 @@ class geocodeTestCase(unittest.TestCase):
                     },
                     crs="EPSG:4326",
                 )
-                for version in ["20220314", "20250109", "20251204"]:
+                for version in ["20220314", "20250109", "20251204", "20260209"]:
                     geo.cache_manager.write(f"gsp_boundaries_{version}", gsp_boundaries)
                 geo.cache_manager.write("dno_boundaries", gpd.GeoDataFrame({}))
 

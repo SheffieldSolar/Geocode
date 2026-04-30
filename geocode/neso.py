@@ -54,7 +54,7 @@ class NationalGrid:
         """
         Function to setup lookup files.
         """
-        for version in ["20220314", "20250109", "20251204"]:
+        for version in ["20220314", "20250109", "20251204", "20260209"]:
             self.load_gsp_boundaries(version)
         self._load_dno_boundaries()
 
@@ -112,6 +112,7 @@ class NationalGrid:
         data_url = {
             "20250109": "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/d95e8c1b-9cd9-41dd-aacb-4b53b8c07c20/download/gsp_regions_20250109.zip",
             "20251204": "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/c5647312-afab-4a58-8158-2f1efed1d7fc/download/gsp_regions_20251204.zip",
+            "20260209": "https://api.neso.energy/dataset/2810092e-d4b2-472f-b955-d8bea01f9ec0/resource/5dfab3dd-f192-40ab-b97f-b365a594293c/download/gsp_regions_20260209.zip",
         }
         gsp_boundaries_cache_contents = self.cache_manager.retrieve(
             f"gsp_boundaries_{version}"
@@ -209,7 +210,7 @@ class NationalGrid:
         """
         if version == "20220314":
             return self._load_gsp_boundaries_20220314()
-        elif version in ["20250109", "20251204"]:
+        elif version in ["20250109", "20251204", "20260209"]:
             return self._load_gsp_boundaries(version=version)
         else:
             raise ValueError(f"GSP boundaries version {version} is not supported.")
