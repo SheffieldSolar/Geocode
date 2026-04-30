@@ -294,7 +294,7 @@ class Geocoder:
         """
         entity = entity.lower()
         if entity == "gsp":
-            version = kwargs.pop("version", "20251204")
+            version = kwargs.pop("version", "20260209")
             return self.neso.reverse_geocode_gsp(latlons, version, **kwargs)
         elif entity == "llsoa":
             version = kwargs.pop("version", "2011")
