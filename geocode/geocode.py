@@ -128,12 +128,13 @@ class Geocoder:
         version = kwargs.get("version", "20250109")
         return self.neso.load_gsp_boundaries(version)
 
-    def get_llsoa_boundaries(self):
+    def get_llsoa_boundaries(self, **kwargs):
         """
         Load the LLSOA boundaries, either from local cache if available, else fetch from raw API
         (England and Wales) and packaged data (Scotland).
         """
-        return self.ons_nrs._load_llsoa_boundaries()
+        version = kwargs.get("version", "2021")
+        return self.ons_nrs._load_llsoa_boundaries(version)
 
     def geocode_llsoa(self, llsoa_boundaries):
         """
