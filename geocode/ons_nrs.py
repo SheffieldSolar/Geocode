@@ -11,6 +11,7 @@ import sys
 import zipfile
 import json
 import csv
+import tempfile
 import logging
 from pathlib import Path
 from typing import Literal, Optional, Iterable, Tuple, Union, List, Dict
@@ -45,7 +46,6 @@ class ONS_NRS:
         """
         self.cache_manager = cache_manager
         self.data_dir = SCRIPT_DIR.joinpath("ons")
-        self.nrs_zipfile = self.data_dir.joinpath("nrs_2011.zip")
         self.constituency_lookup_file = self.data_dir.joinpath(
             "constituency_centroids_Dec2020.psv"
         )
@@ -211,12 +211,17 @@ class ONS_NRS:
         `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         llsoa_filename = {
-            "2011": "OutputArea2011_EoR_WGS84.shp",
-            "2021": "OutputArea2022_EoR.shp",
+            "2011": "OutputArea2011_EoR_WGS84.geojson",
+            "2021": "OutputArea2022_EoR.geojson",
         }
-        gdf = gpd.read_file(f"zip://{zip_path}!{llsoa_filename[version]}")
+        target_file = llsoa_filename[version]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            utils.extract_from_7z(zip_path, target_file, tmpdir)
+            extracted_file = Path(tmpdir) / target_file
+            gdf = gpd.read_file(extracted_file)
         if version == "2021":
             gdf.set_crs("EPSG:27700", inplace=True)
             gdf.to_crs("EPSG:4326", inplace=True)

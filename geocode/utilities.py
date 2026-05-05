@@ -10,11 +10,13 @@ import sys
 import logging
 import requests
 import json
+from pathlib import Path
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
 import geopandas as gpd
 import pandas as pd
 import pyproj
+import py7zr
 
 
 class GenericException(Exception):
@@ -423,3 +425,21 @@ def add_latlon(
     df[lat_col] = df.geometry.y
     df[lon_col] = df.geometry.x
     return df
+
+
+def extract_from_7z(archive_path: Path, target_filename: str, tmp_dir: str):
+    """
+    Extract a file from a .7z archive.
+
+    Parameters
+    ----------
+    `archive_path` : Path
+        Path to the .7z archive.
+    `target_filename` : str
+        The filename to extract (e.g. "OutputArea2011_EoR_WGS84.geojson").
+    `tmp_dir` : str
+        Path to the temporary directory to extract into.
+    """
+    with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
+        targets = [name for name in archive.getnames() if name == target_filename]
+        archive.extract(path=tmp_dir, targets=targets)

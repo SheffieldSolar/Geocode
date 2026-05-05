@@ -10,3 +10,4 @@ rtree
 shapely>=1.7.0
 pyshp
 geopandas
+py7zr
