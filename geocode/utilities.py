@@ -6,6 +6,7 @@ Utilities for the Geocode library.
 - First Authored: 2022-10-19
 """
 
+import io
 import sys
 import logging
 import requests
@@ -443,3 +444,43 @@ def extract_from_7z(archive_path: Path, target_filename: str, tmp_dir: str):
     with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
         targets = [name for name in archive.getnames() if name == target_filename]
         archive.extract(path=tmp_dir, targets=targets)
+
+
+def read_csv_from_7z(archive_path, target_filename, **kwargs):
+    """
+    Extract a CSV file from a .7z archive directly into memory.
+
+    Parameters
+    ----------
+    `archive_path` : Path
+        Path to the .7z archive.
+    `target_filename` : str
+        The CSV filename to extract.
+    `**kwargs`
+        Additional keyword arguments passed to `pd.read_csv`.
+
+    Returns
+    -------
+    `pd.DataFrame`
+        The extracted CSV file as a DataFrame.
+    """
+
+    class InMemoryFactory:
+        """
+        A factory for py7zr to extract files into memory rather than to disk.
+        """
+
+        def __init__(self):
+            self.files = {}
+
+        def create(self, filename):
+            buffer = io.BytesIO()
+            self.files[filename] = buffer
+            return buffer
+
+    factory = InMemoryFactory()
+
+    with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
+        archive.extract(targets=[target_filename], factory=factory)
+    factory.files[target_filename].seek(0)
+    return pd.read_csv(factory.files[target_filename], **kwargs)

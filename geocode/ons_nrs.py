@@ -117,18 +117,20 @@ class ONS_NRS:
         ]
         engwales_lookup.reset_index(names="code", inplace=True)
 
-        zip_path_2011 = self.data_dir.joinpath("nrs_2011.zip")
-        zip_path_2021 = self.data_dir.joinpath("nrs_2021.zip")
+        zip_path_2011 = self.data_dir.joinpath("nrs_2011.7z")
+        zip_path_2021 = self.data_dir.joinpath("nrs_2021.7z")
 
-        OA_2011_centroids = gpd.read_file(
-            f"zip://{zip_path_2011}!OutputArea2011_PWC_WGS84.csv",
-            columns=["code", "easting", "northing"],
+        OA_2011_centroids = utils.read_csv_from_7z(
+            zip_path_2011,
+            "OutputArea2011_PWC_WGS84.csv",
+            usecols=["code", "easting", "northing"],
         )
         OA_2011_centroids = utils.add_latlon(OA_2011_centroids, "easting", "northing")
         scots_lookup_2011 = OA_2011_centroids[["code", "latitude", "longitude"]]
-        OA_2021_centroids = gpd.read_file(
-            f"zip://{zip_path_2021}!OutputArea2022_PWC_WGS84.csv",
-            columns=["code", "easting", "northing"],
+        OA_2021_centroids = utils.read_csv_from_7z(
+            zip_path_2021,
+            "OutputArea2022_PWC_WGS84.csv",
+            usecols=["code", "easting", "northing"],
         )
         OA_2021_centroids = utils.add_latlon(OA_2021_centroids, "easting", "northing")
         scots_lookup_2021 = OA_2021_centroids[["code", "latitude", "longitude"]]
@@ -136,17 +138,19 @@ class ONS_NRS:
             drop=True
         )
 
-        DZ_2011_centroids = gpd.read_file(
-            f"zip://{zip_path_2011}!SG_DataZone_Cent_2011.csv",
-            columns=["DataZone", "Easting", "Northing"],
+        DZ_2011_centroids = utils.read_csv_from_7z(
+            zip_path_2011,
+            "SG_DataZone_Cent_2011.csv",
+            usecols=["DataZone", "Easting", "Northing"],
         )
         DZ_2011_centroids = utils.add_latlon(DZ_2011_centroids, "Easting", "Northing")
         scots_dz_lookup_2011 = DZ_2011_centroids[
             ["DataZone", "latitude", "longitude"]
         ].rename(columns={"DataZone": "code"})
-        DZ_2021_centroids = gpd.read_file(
-            f"zip://{zip_path_2021}!SG_DataZone_Cent_2022.csv",
-            columns=["DataZone", "Easting", "Northing"],
+        DZ_2021_centroids = utils.read_csv_from_7z(
+            zip_path_2021,
+            "SG_DataZone_Cent_2022.csv",
+            usecols=["DataZone", "Easting", "Northing"],
         )
         DZ_2021_centroids = utils.add_latlon(DZ_2021_centroids, "Easting", "Northing")
         scots_dz_lookup_2021 = DZ_2021_centroids[
