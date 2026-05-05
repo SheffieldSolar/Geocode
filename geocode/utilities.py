@@ -446,7 +446,7 @@ def extract_from_7z(archive_path: Path, target_filename: str, tmp_dir: str):
         archive.extract(path=tmp_dir, targets=targets)
 
 
-def read_csv_from_7z(archive_path, target_filename, **kwargs):
+def read_csv_from_7z(archive_path: Path, target_filename: str, **kwargs):
     """
     Extract a CSV file from a .7z archive directly into memory.
 
