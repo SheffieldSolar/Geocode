@@ -282,7 +282,7 @@ class ONS_NRS:
                 f"Loading {version} LLSOA<->Datazone lookup from cache {cache_label}"
             )
             return datazone_lookup_cache_contents
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        zip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
         dz_lookup = utils.read_csv_from_7z(zip_path, dz_lookup_filename[version])
         if version == "2011":
