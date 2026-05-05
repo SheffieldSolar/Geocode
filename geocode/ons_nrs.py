@@ -284,9 +284,7 @@ class ONS_NRS:
             return datazone_lookup_cache_contents
         zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
         dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
-        with zipfile.ZipFile(zip_path, "r") as nrs_zip:
-            with nrs_zip.open(dz_lookup_filename[version], "r") as fid:
-                dz_lookup = pd.read_csv(fid)
+        dz_lookup = utils.read_csv_from_7z(zip_path, dz_lookup_filename[version])
         if version == "2011":
             dz_lookup.set_index("OutputArea2011Code", inplace=True)
             dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
