@@ -51,7 +51,7 @@ class ONS_NRS:
         )
         self.lad_lookup_file = self.data_dir.joinpath("lad_centroids_May2021.psv")
         self.pc_llsoa_zipfile = self.data_dir.joinpath(
-            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip"
+            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.7z"
         )
         self.llsoa_lookup = None
         self.llsoa_regions = None
@@ -529,7 +529,9 @@ class ONS_NRS:
                 "Loading postcode<->LLSOA lookup from cache ('%s')", "pc_llsoa_lookup"
             )
             return postcode_llsoa_lookup_cache_contents
-        pc_llsoa_lookup = pd.read_csv(self.pc_llsoa_zipfile, dtype=str)
+        pc_llsoa_lookup = utils.read_csv_from_7z(
+            self.pc_llsoa_zipfile, "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.csv", dtype=str
+        )
         pc_llsoa_lookup["postcode"] = (
             pc_llsoa_lookup.pcds.str.strip().str.upper().str.replace(" ", "")
         )
