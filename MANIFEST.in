@@ -1,6 +1,7 @@
 include geocode/ons/constituency_centroids.psv
 include geocode/ons/constituency_centroids_Dec2020.psv
 include geocode/ons/lad_centroids_May2021.psv
-include geocode/ons/nrs.zip
-include geocode/ons/PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip
+include geocode/ons/nrs_2011.7z
+include geocode/ons/nrs_2021.7z
+include geocode/ons/PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.7z
 include geocode/code_point_open/codepo_gb.zip

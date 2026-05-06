@@ -7,21 +7,16 @@ Manage data from the Office for National Statistics (ONS) and National Records S
 """
 
 import os
-import sys
-import zipfile
-import json
-import csv
+import tempfile
 import logging
 from pathlib import Path
-from typing import Literal, Optional, Iterable, Tuple, Union, List, Dict
+from typing import Literal, Iterable, Tuple, Union, List, Dict
 
 import pandas as pd
 import geopandas as gpd
-import shapefile
 
 try:
-    from shapely.geometry import shape, Point
-    from shapely.ops import unary_union
+    from shapely.geometry import shape
 except ImportError:
     logging.warning(
         "Failed to import Shapely library - you will not be able to reverse-geocode! "
@@ -45,13 +40,12 @@ class ONS_NRS:
         """
         self.cache_manager = cache_manager
         self.data_dir = SCRIPT_DIR.joinpath("ons")
-        self.nrs_zipfile = self.data_dir.joinpath("nrs_2011.zip")
         self.constituency_lookup_file = self.data_dir.joinpath(
             "constituency_centroids_Dec2020.psv"
         )
         self.lad_lookup_file = self.data_dir.joinpath("lad_centroids_May2021.psv")
-        self.pc_llsoa_zipfile = self.data_dir.joinpath(
-            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.zip"
+        self.pc_llsoa_sevenzipfile = self.data_dir.joinpath(
+            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.7z"
         )
         self.llsoa_lookup = None
         self.llsoa_regions = None
@@ -117,18 +111,20 @@ class ONS_NRS:
         ]
         engwales_lookup.reset_index(names="code", inplace=True)
 
-        zip_path_2011 = self.data_dir.joinpath("nrs_2011.zip")
-        zip_path_2021 = self.data_dir.joinpath("nrs_2021.zip")
+        sevenzip_path_2011 = self.data_dir.joinpath("nrs_2011.7z")
+        sevenzip_path_2021 = self.data_dir.joinpath("nrs_2021.7z")
 
-        OA_2011_centroids = gpd.read_file(
-            f"zip://{zip_path_2011}!OutputArea2011_PWC_WGS84.csv",
-            columns=["code", "easting", "northing"],
+        OA_2011_centroids = utils.read_csv_from_7z(
+            sevenzip_path_2011,
+            "OutputArea2011_PWC_WGS84.csv",
+            usecols=["code", "easting", "northing"],
         )
         OA_2011_centroids = utils.add_latlon(OA_2011_centroids, "easting", "northing")
         scots_lookup_2011 = OA_2011_centroids[["code", "latitude", "longitude"]]
-        OA_2021_centroids = gpd.read_file(
-            f"zip://{zip_path_2021}!OutputArea2022_PWC_WGS84.csv",
-            columns=["code", "easting", "northing"],
+        OA_2021_centroids = utils.read_csv_from_7z(
+            sevenzip_path_2021,
+            "OutputArea2022_PWC_WGS84.csv",
+            usecols=["code", "easting", "northing"],
         )
         OA_2021_centroids = utils.add_latlon(OA_2021_centroids, "easting", "northing")
         scots_lookup_2021 = OA_2021_centroids[["code", "latitude", "longitude"]]
@@ -136,17 +132,19 @@ class ONS_NRS:
             drop=True
         )
 
-        DZ_2011_centroids = gpd.read_file(
-            f"zip://{zip_path_2011}!SG_DataZone_Cent_2011.csv",
-            columns=["DataZone", "Easting", "Northing"],
+        DZ_2011_centroids = utils.read_csv_from_7z(
+            sevenzip_path_2011,
+            "SG_DataZone_Cent_2011.csv",
+            usecols=["DataZone", "Easting", "Northing"],
         )
         DZ_2011_centroids = utils.add_latlon(DZ_2011_centroids, "Easting", "Northing")
         scots_dz_lookup_2011 = DZ_2011_centroids[
             ["DataZone", "latitude", "longitude"]
         ].rename(columns={"DataZone": "code"})
-        DZ_2021_centroids = gpd.read_file(
-            f"zip://{zip_path_2021}!SG_DataZone_Cent_2022.csv",
-            columns=["DataZone", "Easting", "Northing"],
+        DZ_2021_centroids = utils.read_csv_from_7z(
+            sevenzip_path_2021,
+            "SG_DataZone_Cent_2022.csv",
+            usecols=["DataZone", "Easting", "Northing"],
         )
         DZ_2021_centroids = utils.add_latlon(DZ_2021_centroids, "Easting", "Northing")
         scots_dz_lookup_2021 = DZ_2021_centroids[
@@ -204,19 +202,24 @@ class ONS_NRS:
 
     def _load_llsoa_boundaries_scots_regions(self, version: Literal["2011", "2021"]):
         """
-        Load the LLSOA boundaries for Scotland from the NRS zipfile.
+        Load the LLSOA boundaries for Scotland from the NRS 7z file.
 
         Parameters
         ----------
         `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        sevenzip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         llsoa_filename = {
-            "2011": "OutputArea2011_EoR_WGS84.shp",
-            "2021": "OutputArea2022_EoR.shp",
+            "2011": "OutputArea2011_EoR_WGS84.geojson",
+            "2021": "OutputArea2022_EoR.geojson",
         }
-        gdf = gpd.read_file(f"zip://{zip_path}!{llsoa_filename[version]}")
+        target_file = llsoa_filename[version]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            utils.extract_from_7z(sevenzip_path, target_file, tmpdir)
+            extracted_file = Path(tmpdir) / target_file
+            gdf = gpd.read_file(extracted_file)
         if version == "2021":
             gdf.set_crs("EPSG:27700", inplace=True)
             gdf.to_crs("EPSG:4326", inplace=True)
@@ -273,11 +276,9 @@ class ONS_NRS:
                 f"Loading {version} LLSOA<->Datazone lookup from cache {cache_label}"
             )
             return datazone_lookup_cache_contents
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.zip")
+        sevenzip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
-        with zipfile.ZipFile(zip_path, "r") as nrs_zip:
-            with nrs_zip.open(dz_lookup_filename[version], "r") as fid:
-                dz_lookup = pd.read_csv(fid)
+        dz_lookup = utils.read_csv_from_7z(sevenzip_path, dz_lookup_filename[version])
         if version == "2011":
             dz_lookup.set_index("OutputArea2011Code", inplace=True)
             dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
@@ -522,7 +523,11 @@ class ONS_NRS:
                 "Loading postcode<->LLSOA lookup from cache ('%s')", "pc_llsoa_lookup"
             )
             return postcode_llsoa_lookup_cache_contents
-        pc_llsoa_lookup = pd.read_csv(self.pc_llsoa_zipfile, dtype=str)
+        pc_llsoa_lookup = utils.read_csv_from_7z(
+            self.pc_llsoa_sevenzipfile,
+            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.csv",
+            dtype=str,
+        )
         pc_llsoa_lookup["postcode"] = (
             pc_llsoa_lookup.pcds.str.strip().str.upper().str.replace(" ", "")
         )
