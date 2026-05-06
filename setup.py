@@ -24,7 +24,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.7",
+    version="1.7.1",
     description="Geocode postcodes, addresses or LLSOA using the Code Point Open database and GMaps API.",
     long_description=long_description.replace("\r", ""),
     long_description_content_type="text/markdown",
@@ -79,6 +79,7 @@ setup(
         "pyshp",
         "pyproj",
         "geopandas",
+        "py7zr",
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
