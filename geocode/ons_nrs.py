@@ -50,7 +50,7 @@ class ONS_NRS:
             "constituency_centroids_Dec2020.psv"
         )
         self.lad_lookup_file = self.data_dir.joinpath("lad_centroids_May2021.psv")
-        self.pc_llsoa_zipfile = self.data_dir.joinpath(
+        self.pc_llsoa_sevenzipfile = self.data_dir.joinpath(
             "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.7z"
         )
         self.llsoa_lookup = None
@@ -117,18 +117,18 @@ class ONS_NRS:
         ]
         engwales_lookup.reset_index(names="code", inplace=True)
 
-        zip_path_2011 = self.data_dir.joinpath("nrs_2011.7z")
-        zip_path_2021 = self.data_dir.joinpath("nrs_2021.7z")
+        sevenzip_path_2011 = self.data_dir.joinpath("nrs_2011.7z")
+        sevenzip_path_2021 = self.data_dir.joinpath("nrs_2021.7z")
 
         OA_2011_centroids = utils.read_csv_from_7z(
-            zip_path_2011,
+            sevenzip_path_2011,
             "OutputArea2011_PWC_WGS84.csv",
             usecols=["code", "easting", "northing"],
         )
         OA_2011_centroids = utils.add_latlon(OA_2011_centroids, "easting", "northing")
         scots_lookup_2011 = OA_2011_centroids[["code", "latitude", "longitude"]]
         OA_2021_centroids = utils.read_csv_from_7z(
-            zip_path_2021,
+            sevenzip_path_2021,
             "OutputArea2022_PWC_WGS84.csv",
             usecols=["code", "easting", "northing"],
         )
@@ -139,7 +139,7 @@ class ONS_NRS:
         )
 
         DZ_2011_centroids = utils.read_csv_from_7z(
-            zip_path_2011,
+            sevenzip_path_2011,
             "SG_DataZone_Cent_2011.csv",
             usecols=["DataZone", "Easting", "Northing"],
         )
@@ -148,7 +148,7 @@ class ONS_NRS:
             ["DataZone", "latitude", "longitude"]
         ].rename(columns={"DataZone": "code"})
         DZ_2021_centroids = utils.read_csv_from_7z(
-            zip_path_2021,
+            sevenzip_path_2021,
             "SG_DataZone_Cent_2022.csv",
             usecols=["DataZone", "Easting", "Northing"],
         )
@@ -208,14 +208,14 @@ class ONS_NRS:
 
     def _load_llsoa_boundaries_scots_regions(self, version: Literal["2011", "2021"]):
         """
-        Load the LLSOA boundaries for Scotland from the NRS zipfile.
+        Load the LLSOA boundaries for Scotland from the NRS 7z file.
 
         Parameters
         ----------
         `version` : Literal["2011", "2021"]
             The version of the LLSOA boundaries to load.
         """
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
+        sevenzip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         llsoa_filename = {
             "2011": "OutputArea2011_EoR_WGS84.geojson",
             "2021": "OutputArea2022_EoR.geojson",
@@ -223,7 +223,7 @@ class ONS_NRS:
         target_file = llsoa_filename[version]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            utils.extract_from_7z(zip_path, target_file, tmpdir)
+            utils.extract_from_7z(sevenzip_path, target_file, tmpdir)
             extracted_file = Path(tmpdir) / target_file
             gdf = gpd.read_file(extracted_file)
         if version == "2021":
@@ -282,9 +282,9 @@ class ONS_NRS:
                 f"Loading {version} LLSOA<->Datazone lookup from cache {cache_label}"
             )
             return datazone_lookup_cache_contents
-        zip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
+        sevenzip_path = self.data_dir.joinpath(f"nrs_{version}.7z")
         dz_lookup_filename = {"2011": "OA_DZ_IZ_2011.csv", "2021": "OA22_DZ22_IZ22.csv"}
-        dz_lookup = utils.read_csv_from_7z(zip_path, dz_lookup_filename[version])
+        dz_lookup = utils.read_csv_from_7z(sevenzip_path, dz_lookup_filename[version])
         if version == "2011":
             dz_lookup.set_index("OutputArea2011Code", inplace=True)
             dz_lookup.drop(columns=["IntermediateZone2011Code"], inplace=True)
@@ -530,7 +530,9 @@ class ONS_NRS:
             )
             return postcode_llsoa_lookup_cache_contents
         pc_llsoa_lookup = utils.read_csv_from_7z(
-            self.pc_llsoa_zipfile, "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.csv", dtype=str
+            self.pc_llsoa_sevenzipfile,
+            "PCD_OA_LSOA_MSOA_LAD_MAY22_UK_LU.csv",
+            dtype=str,
         )
         pc_llsoa_lookup["postcode"] = (
             pc_llsoa_lookup.pcds.str.strip().str.upper().str.replace(" ", "")
