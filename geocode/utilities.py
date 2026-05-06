@@ -428,7 +428,7 @@ def add_latlon(
     return df
 
 
-def extract_from_7z(archive_path: Path, target_filename: str, tmp_dir: str):
+def extract_from_7z(archive_path: Path, file_to_extract: str, tmp_dir: str):
     """
     Extract a file from a .7z archive.
 
@@ -436,17 +436,16 @@ def extract_from_7z(archive_path: Path, target_filename: str, tmp_dir: str):
     ----------
     `archive_path` : Path
         Path to the .7z archive.
-    `target_filename` : str
+    `file_to_extract` : str
         The filename to extract (e.g. "OutputArea2011_EoR_WGS84.geojson").
     `tmp_dir` : str
         Path to the temporary directory to extract into.
     """
     with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
-        targets = [name for name in archive.getnames() if name == target_filename]
-        archive.extract(path=tmp_dir, targets=targets)
+        archive.extract(path=tmp_dir, targets=[file_to_extract])
 
 
-def read_csv_from_7z(archive_path: Path, target_filename: str, **kwargs):
+def read_csv_from_7z(archive_path: Path, file_to_read: str, **kwargs):
     """
     Extract a CSV file from a .7z archive directly into memory.
 
@@ -454,7 +453,7 @@ def read_csv_from_7z(archive_path: Path, target_filename: str, **kwargs):
     ----------
     `archive_path` : Path
         Path to the .7z archive.
-    `target_filename` : str
+    `file_to_read` : str
         The CSV filename to extract.
     `**kwargs`
         Additional keyword arguments passed to `pd.read_csv`.
@@ -481,6 +480,6 @@ def read_csv_from_7z(archive_path: Path, target_filename: str, **kwargs):
     factory = InMemoryFactory()
 
     with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
-        archive.extract(targets=[target_filename], factory=factory)
-    factory.files[target_filename].seek(0)
-    return pd.read_csv(factory.files[target_filename], **kwargs)
+        archive.extract(targets=[file_to_read], factory=factory)
+    factory.files[file_to_read].seek(0)
+    return pd.read_csv(factory.files[file_to_read], **kwargs)
