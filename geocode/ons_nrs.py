@@ -7,22 +7,16 @@ Manage data from the Office for National Statistics (ONS) and National Records S
 """
 
 import os
-import sys
-import zipfile
-import json
-import csv
 import tempfile
 import logging
 from pathlib import Path
-from typing import Literal, Optional, Iterable, Tuple, Union, List, Dict
+from typing import Literal, Iterable, Tuple, Union, List, Dict
 
 import pandas as pd
 import geopandas as gpd
-import shapefile
 
 try:
-    from shapely.geometry import shape, Point
-    from shapely.ops import unary_union
+    from shapely.geometry import shape
 except ImportError:
     logging.warning(
         "Failed to import Shapely library - you will not be able to reverse-geocode! "
