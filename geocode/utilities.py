@@ -265,6 +265,8 @@ def reverse_geocode(
     ).to_crs(regions.crs)
     regions.set_index("region_id", inplace=True)
     joined = regions.sjoin(coords, how="right").to_crs(regions.crs)
+    # Remove coords which fall on the boundary of multiple regions by deduplicating
+    joined = joined[~joined.index.duplicated(keep="first")]
     # Perform sjoin nearest on coords that wasn't reverse-geocoded to a region
     na_geolocations = joined[joined["region_id"].isna()].copy()
     if not na_geolocations.empty and max_distance is not None:
