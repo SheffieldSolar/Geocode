@@ -6,15 +6,18 @@ Utilities for the Geocode library.
 - First Authored: 2022-10-19
 """
 
+import io
 import sys
 import logging
 import requests
 import json
+from pathlib import Path
 from typing import Optional, Iterable, Tuple, Union, List, Dict
 
 import geopandas as gpd
 import pandas as pd
 import pyproj
+import py7zr
 
 
 class GenericException(Exception):
@@ -423,3 +426,60 @@ def add_latlon(
     df[lat_col] = df.geometry.y
     df[lon_col] = df.geometry.x
     return df
+
+
+def extract_from_7z(archive_path: Path, file_to_extract: str, tmp_dir: str):
+    """
+    Extract a file from a .7z archive.
+
+    Parameters
+    ----------
+    `archive_path` : Path
+        Path to the .7z archive.
+    `file_to_extract` : str
+        The filename to extract (e.g. "OutputArea2011_EoR_WGS84.geojson").
+    `tmp_dir` : str
+        Path to the temporary directory to extract into.
+    """
+    with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
+        archive.extract(path=tmp_dir, targets=[file_to_extract])
+
+
+def read_csv_from_7z(archive_path: Path, file_to_read: str, **kwargs):
+    """
+    Extract a CSV file from a .7z archive directly into memory.
+
+    Parameters
+    ----------
+    `archive_path` : Path
+        Path to the .7z archive.
+    `file_to_read` : str
+        The CSV filename to extract.
+    `**kwargs`
+        Additional keyword arguments passed to `pd.read_csv`.
+
+    Returns
+    -------
+    `pd.DataFrame`
+        The extracted CSV file as a DataFrame.
+    """
+
+    class InMemoryFactory:
+        """
+        A factory for py7zr to extract files into memory rather than to disk.
+        """
+
+        def __init__(self):
+            self.files = {}
+
+        def create(self, filename):
+            buffer = io.BytesIO()
+            self.files[filename] = buffer
+            return buffer
+
+    factory = InMemoryFactory()
+
+    with py7zr.SevenZipFile(str(archive_path), mode="r") as archive:
+        archive.extract(targets=[file_to_read], factory=factory)
+    factory.files[file_to_read].seek(0)
+    return pd.read_csv(factory.files[file_to_read], **kwargs)
