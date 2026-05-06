@@ -125,7 +125,7 @@ class Geocoder:
         """
         Get the GSP / GNode boundaries from the ESO Data Portal API.
         """
-        version = kwargs.get("version", "20250109")
+        version = kwargs.get("version", "20260209")
         return self.neso.load_gsp_boundaries(version)
 
     def get_llsoa_boundaries(self, **kwargs):
