@@ -1,0 +1,24 @@
+# This is the configurations for depandabot to automatically update dependencies for both uv and GitHub Actions.
+# https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configuring-dependabot-version-updates
+version: 2
+updates:
+  # Enable version updates for uv
+  - package-ecosystem: "uv"
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+    groups:
+      # Group all minor and patch updates together
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/" # Dependabot will find `.github/workflows` automatically
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
